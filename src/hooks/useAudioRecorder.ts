@@ -106,11 +106,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
           recognitionRef.current.stop();
         }
 
-        // Return accumulated transcript
-        const finalTranscript = transcriptRef.current.trim();
-        console.log('✅ Final transcript:', finalTranscript);
-        setIsTranscribing(false);
-        resolve(finalTranscript);
+        // Wait a bit for speech recognition to finish processing
+        setTimeout(() => {
+          const finalTranscript = transcriptRef.current.trim();
+          console.log('✅ Final transcript:', finalTranscript);
+          setIsTranscribing(false);
+          resolve(finalTranscript);
+        }, 300);
       };
 
       console.log('⏹️ Calling mediaRecorder.stop()');
