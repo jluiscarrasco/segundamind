@@ -32,6 +32,7 @@ interface CalendarViewProps {
   onUpdateTaskDate?: (id: string, newDate: string) => void;
   onUpdateProjectDate?: (id: string, newDate: string) => void;
   onUpdateAreaDate?: (id: string, newDate: string) => void;
+  defaultMode?: 'week' | 'month';
 }
 
 function startOfWeek(date: Date): Date {
@@ -59,8 +60,8 @@ function addDays(d: Date, n: number): Date {
 const DAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MONTH_NAMES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone, onUpdateTaskDate, onUpdateProjectDate, onUpdateAreaDate }: CalendarViewProps) {
-  const [mode, setMode] = useState<CalendarMode>('month');
+export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone, onUpdateTaskDate, onUpdateProjectDate, onUpdateAreaDate, defaultMode = 'month' }: CalendarViewProps) {
+  const [mode, setMode] = useState<CalendarMode>(defaultMode);
   const [refDate, setRefDate] = useState(() => new Date());
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const todayKey = getTodayKeyCET();

@@ -402,6 +402,7 @@ const Index = () => {
                     onUpdateTaskDate={(id, date) => store.updateTask(id, { reviewDate: date })}
                     onUpdateProjectDate={(id, date) => store.updateProject(id, { reviewDate: date })}
                     onUpdateAreaDate={(id, date) => store.updateArea(id, { reviewDate: date })}
+                    defaultMode="week"
                   />
                   <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
