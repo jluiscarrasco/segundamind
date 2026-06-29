@@ -3,7 +3,6 @@ import { GlobalSearch } from '@/components/GlobalSearch';
 import { AnimatePresence } from 'framer-motion';
 import { AppSidebar } from '@/components/AppSidebar';
 import { TuAgenda } from '@/components/TuAgenda';
-import { WeekAgenda } from '@/components/WeekAgenda';
 import { UnprocessedNotes } from '@/components/UnprocessedNotes';
 import { CommandDialog } from '@/components/CommandDialog';
 import { ContextPanel } from '@/components/ContextPanel';
@@ -394,7 +393,6 @@ const Index = () => {
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
                   <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} />
-                  <WeekAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} onEditEntity={handleEditEntity} />
                   <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
 
