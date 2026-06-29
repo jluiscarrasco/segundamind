@@ -1,0 +1,241 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 215 90% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 16% 93%;
+    --secondary-foreground: 222 30% 35%;
+
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 215 80% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 215 90% 50%;
+
+    --radius: 0.75rem;
+
+    /* Importance colors */
+    --importance-critical: 0 80% 50%;
+    --importance-important: 30 90% 48%;
+    --importance-normal: 215 70% 50%;
+    --importance-low: 220 10% 55%;
+    --importance-none: 220 8% 72%;
+
+    /* Status colors */
+    --status-funnel: 260 60% 55%;
+    --status-ready: 215 75% 50%;
+    --status-blocked: 40 75% 48%;
+    --status-active: 145 60% 40%;
+    --status-finished: 220 10% 55%;
+
+    /* Surfaces */
+    --surface-hover: 220 14% 95%;
+    --surface-active: 220 16% 93%;
+    --surface-elevated: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar-background: 222 25% 98%;
+    --sidebar-foreground: 222 20% 40%;
+    --sidebar-primary: 215 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 16% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 215 90% 50%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 90% 50%), hsl(235 70% 55%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(220 20% 97%));
+    --shadow-glow: 0 0 20px hsl(215 90% 50% / 0.12);
+    --shadow-card: 0 1px 3px hsl(220 20% 50% / 0.08), 0 4px 12px hsl(220 20% 50% / 0.05);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .importance-critical {
+    color: hsl(var(--importance-critical));
+  }
+  .importance-important {
+    color: hsl(var(--importance-important));
+  }
+  .importance-normal {
+    color: hsl(var(--importance-normal));
+  }
+  .importance-low {
+    color: hsl(var(--importance-low));
+  }
+  .importance-none {
+    color: hsl(var(--importance-none));
+  }
+
+  .bg-importance-critical {
+    background-color: hsl(var(--importance-critical));
+  }
+  .bg-importance-important {
+    background-color: hsl(var(--importance-important));
+  }
+  .bg-importance-normal {
+    background-color: hsl(var(--importance-normal));
+  }
+  .bg-importance-low {
+    background-color: hsl(var(--importance-low));
+  }
+  .bg-importance-none {
+    background-color: hsl(var(--importance-none));
+  }
+
+  .bg-importance-critical\/15 {
+    background-color: hsl(var(--importance-critical) / 0.15);
+  }
+  .bg-importance-important\/15 {
+    background-color: hsl(var(--importance-important) / 0.15);
+  }
+  .bg-importance-normal\/15 {
+    background-color: hsl(var(--importance-normal) / 0.15);
+  }
+  .bg-importance-low\/15 {
+    background-color: hsl(var(--importance-low) / 0.15);
+  }
+  .bg-importance-none\/15 {
+    background-color: hsl(var(--importance-none) / 0.15);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+}
+
+/* Wiki page content styles */
+.wiki-content ul li input[type="checkbox"] {
+  @apply mr-2 accent-primary;
+}
+.wiki-content ul:has(input[type="checkbox"]) {
+  @apply list-none pl-0;
+}
+.wiki-content ul:has(input[type="checkbox"]) li {
+  @apply flex items-start gap-0;
+}
+
+/* Wiki tables */
+.wiki-content table {
+  @apply w-full text-sm border-collapse rounded-lg overflow-hidden my-4;
+}
+.wiki-content thead th {
+  @apply bg-secondary/60 text-foreground font-semibold text-left px-3 py-2 border-b border-border;
+}
+.wiki-content tbody td {
+  @apply px-3 py-2 border-b border-border text-foreground/85;
+}
+.wiki-content tbody tr:nth-child(even) {
+  @apply bg-secondary/20;
+}
+.wiki-content tbody tr:hover {
+  @apply bg-secondary/30;
+}
+
+/* Wiki horizontal rules */
+.wiki-content hr {
+  @apply border-border my-6;
+}
+
+/* Wiki headings - explicit sizes to override prose defaults */
+.wiki-content h1 {
+  font-size: 1.375rem !important;
+  line-height: 1.875rem !important;
+  font-weight: 700 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0.75rem !important;
+}
+.wiki-content h2 {
+  font-size: 1.05rem !important;
+  line-height: 1.5rem !important;
+  font-weight: 700 !important;
+  border-top: 1px solid hsl(var(--border)) !important;
+  padding-top: 1rem !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+.wiki-content > h2:first-child {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+.wiki-content h3 {
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+  font-weight: 700 !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.375rem !important;
+}
+.wiki-content h4 {
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  margin-top: 0.75rem !important;
+}
+
+/* Wiki blockquotes */
+.wiki-content blockquote {
+  border-left: 2px solid hsl(var(--primary)) !important;
+  background: transparent !important;
+  padding: 0 0.75rem !important;
+  margin: 0.25rem 0 !important;
+  font-style: normal !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.875rem !important;
+}
+.wiki-content blockquote p {
+  margin: 0 !important;
+}
+
+/* Wiki links */
+.wiki-content a {
+  color: hsl(var(--primary)) !important;
+  text-decoration: underline !important;
+}
+.wiki-content a:hover {
+  opacity: 0.8;
+}
+

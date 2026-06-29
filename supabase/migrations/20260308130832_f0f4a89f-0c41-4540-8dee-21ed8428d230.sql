@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE public.areas, public.projects, public.tasks, public.inbox_items, public.resources;
