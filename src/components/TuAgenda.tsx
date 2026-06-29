@@ -35,6 +35,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
   const { overdue, today, upcoming } = useMemo(() => {
     const all: AgendaItem[] = [];
 
+    // Agregar tareas activas/ready con reviewDate
     tasks.forEach(t => {
       if ((t.status === 'active' || t.status === 'ready') && t.reviewDate) {
         const project = projects.find(p => p.id === t.projectId);
@@ -53,6 +54,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
       }
     });
 
+    // Agregar áreas con reviewDate próxima
     areas.forEach(a => {
       if (a.reviewDate && a.reviewDate <= limitKey) {
         all.push({
@@ -67,6 +69,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
       }
     });
 
+    // Agregar proyectos con reviewDate próxima
     projects.forEach(p => {
       if (p.reviewDate && p.reviewDate <= limitKey) {
         const area = areas.find(a => a.id === p.areaId);
@@ -82,6 +85,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
       }
     });
 
+    // Ordenamiento y separación
     const sortByDate = (a: AgendaItem, b: AgendaItem) => {
       const dateCmp = a.reviewDate.localeCompare(b.reviewDate);
       if (dateCmp !== 0) return dateCmp;
@@ -111,12 +115,6 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
       return `Hace ${diff}d`;
     }
     return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
-  };
-
-  const getDayLabel = (d: string) => {
-    if (d === todayKey) return 'Hoy';
-    if (d === addDaysCETKey(1)) return 'Mañana';
-    return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
   };
 
   const renderItem = (item: AgendaItem, i: number, section: 'overdue' | 'today' | 'upcoming') => {
@@ -167,46 +165,6 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
     );
   };
 
-  const renderTimeline = (items: AgendaItem[], section: 'overdue' | 'today' | 'upcoming') => {
-    if (items.length === 0) return null;
-
-    const groupedByDate = items.reduce(
-      (acc, item) => {
-        const date = item.reviewDate;
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(item);
-        return acc;
-      },
-      {} as Record<string, AgendaItem[]>
-    );
-
-    const sortedDates = Object.keys(groupedByDate).sort();
-
-    return (
-      <div className="px-4 py-3 bg-secondary/20 border-t border-border">
-        <div className="flex items-center gap-1 overflow-x-auto pb-2">
-          {sortedDates.map((date) => {
-            const count = groupedByDate[date].length;
-            const isToday = date === getTodayKeyCET();
-            return (
-              <div
-                key={date}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
-                  isToday
-                    ? 'bg-primary/20 border-primary/50 text-primary font-semibold'
-                    : 'bg-background border-border hover:border-primary/30'
-                }`}
-              >
-                <div className="text-[10px] font-medium">{getDayLabel(date)}</div>
-                <div className="text-[9px] text-muted-foreground">{count} item{count > 1 ? 's' : ''}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   if (total === 0) {
     return (
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
@@ -232,14 +190,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
             Vencidas ({overdue.length})
           </h3>
         </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-80">
+        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
           {overdue.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
           ) : (
             overdue.map((item, i) => renderItem(item, i, 'overdue'))
           )}
         </div>
-        {overdue.length > 0 && renderTimeline(overdue, 'overdue')}
       </div>
 
       {/* PARA HOY */}
@@ -247,14 +204,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         <div className="px-4 py-3 bg-primary/8 border-b border-primary/10">
           <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Para Hoy ({today.length})</h3>
         </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-80">
+        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
           {today.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
           ) : (
             today.map((item, i) => renderItem(item, i, 'today'))
           )}
         </div>
-        {today.length > 0 && renderTimeline(today, 'today')}
       </div>
 
       {/* PRÓXIMOS 7 DÍAS */}
@@ -262,14 +218,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         <div className="px-4 py-3 bg-secondary/50 border-b border-border">
           <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Próximos 7d ({upcoming.length})</h3>
         </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-80">
+        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
           {upcoming.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
           ) : (
             upcoming.map((item, i) => renderItem(item, i, 'upcoming'))
           )}
         </div>
-        {upcoming.length > 0 && renderTimeline(upcoming, 'upcoming')}
       </div>
     </div>
   );
