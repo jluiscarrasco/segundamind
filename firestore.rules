@@ -1,78 +1,106 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
-    function isAuth() {
+
+    // --- Helpers ---
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if user owns the document
-    function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
+    // The existing document belongs to the caller (read / delete / update-source)
+    function ownsExisting() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // --- USER DATA (all user-scoped collections) ---
-    // Allow CRUD if user owns the document
-
-    match /areas/{document=**} {
-      allow read, write, delete: if isAuth();
+    // The incoming document belongs to the caller (create / update-target)
+    function ownsIncoming() {
+      return isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
-    match /projects/{document=**} {
-      allow read, write, delete: if isAuth();
+    // --- USER DATA (owner-only access) ---
+    // read/delete: must own the existing doc.
+    // create: incoming doc must be owned by caller.
+    // update: must own both the existing doc and keep ownership (no reassigning).
+
+    match /areas/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /tasks/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /projects/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /inbox_items/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /tasks/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /resources/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /inbox_items/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /wiki_pages/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /resources/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /user_folders/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /wiki_pages/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /user_files/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /user_folders/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /user_file_tags/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /user_files/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /user_file_links/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /user_file_tags/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /api_tokens/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /user_file_links/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    match /push_subscriptions/{document=**} {
-      allow read, write, delete: if isAuth();
+    match /api_tokens/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
     }
 
-    // --- ADMIN DATA (service role only) ---
+    match /push_subscriptions/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
+    }
+
+    // --- ADMIN DATA (service role / Cloud Functions only) ---
     match /allowed_emails/{document=**} {
-      // Read via Cloud Function (no direct client access)
-      allow read: if false;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     match /oauth_codes/{document=**} {
-      // OAuth codes managed by Cloud Functions only
-      allow read: if false;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     // --- DEFAULT DENY ---
