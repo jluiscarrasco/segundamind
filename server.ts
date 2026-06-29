@@ -686,36 +686,38 @@ Responde de forma concisa y útil. Cuando el usuario pida crear/actualizar eleme
 // FILE UPLOAD
 // ============================================================================
 
-app.post('/api/upload-file', upload.single('file'), async (req, res) => {
+app.post('/api/upload-file', async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file provided' });
-    }
+    const { fileBase64, userId, folderId, fileName, mimeType, fileSize } = req.body;
 
-    const { userId, folderId, fileName } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
+    if (!fileBase64 || !userId || !fileName) {
+      return res.status(400).json({ error: 'fileBase64, userId, fileName required' });
     }
 
     const fileId = require('crypto').randomUUID();
-    const ext = fileName?.includes('.') ? fileName?.split('.').pop() : req.file.originalname.split('.').pop();
+    const ext = fileName.includes('.') ? fileName.split('.').pop() : '';
     const storagePath = `${userId}/drive/${fileId}${ext ? '.' + ext : ''}`;
+
+    // Decode base64 to buffer
+    const buffer = Buffer.from(fileBase64, 'base64');
 
     // Upload to Firebase Storage
     const file = bucket.file(storagePath);
-    await file.save(req.file.buffer, {
+    await file.save(buffer, {
       metadata: {
-        contentType: req.file.mimetype || 'application/octet-stream',
+        contentType: mimeType || 'application/octet-stream',
       },
     });
+
+    console.log(`✅ File uploaded: ${storagePath}`);
 
     res.json({
       success: true,
       fileId,
       storagePath,
-      fileName: fileName || req.file.originalname,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
+      fileName,
+      mimeType,
+      size: fileSize,
     });
   } catch (error: any) {
     console.error('Upload error:', error);

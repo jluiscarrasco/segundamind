@@ -235,16 +235,30 @@ export function useDrive() {
       if (!user) return;
 
       try {
-        // Use server endpoint to upload (avoids CORS issues)
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', user.uid);
-        formData.append('folderId', folderId || '');
-        formData.append('fileName', file.name);
+        // Read file as base64 using FileReader
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64String = result.split(',')[1];
+            resolve(base64String);
+          };
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsDataURL(file);
+        });
 
-        const response = await fetch('/api/upload-file', {
+        // Use server endpoint to upload (avoids CORS issues)
+        const response = await fetch('http://localhost:8082/api/upload-file', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileBase64: base64,
+            userId: user.uid,
+            folderId: folderId || null,
+            fileName: file.name,
+            mimeType: file.type,
+            fileSize: file.size,
+          }),
         });
 
         if (!response.ok) {
