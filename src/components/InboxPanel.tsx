@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadBytes, ref, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Inbox, Send, Link2, FileText, Trash2, ArrowRightCircle, Sparkles, Loader2, StickyNote, ListChecks, Upload, Paperclip } from 'lucide-react';
+import { Inbox, Send, Link2, FileText, Trash2, ArrowRightCircle, Sparkles, Loader2, StickyNote, ListChecks, Upload, Paperclip, Mic, StopCircle, RotateCcw } from 'lucide-react';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
 import { storage } from '@/integrations/firebase/config';
@@ -39,7 +40,43 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const [noteEntityType, setNoteEntityType] = useState<EntityType>('project');
   const [noteEntityId, setNoteEntityId] = useState('');
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRecorder = useAudioRecorder();
+
+  const handleStopAndTranscribe = async () => {
+    const audioBlob = await audioRecorder.stopRecording();
+    if (!audioBlob) return;
+
+    setIsTranscribingAudio(true);
+    try {
+      const audioBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+
+      const response = await fetch('/api/transcribe-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64, mimeType: 'audio/webm' }),
+      });
+
+      const data = await response.json();
+      if (data.transcript) {
+        setInput(data.transcript);
+        toast.success('Audio transcrito correctamente');
+      }
+    } catch (err: any) {
+      console.error('Transcription error:', err);
+      toast.error('Error al transcribir audio');
+    } finally {
+      setIsTranscribingAudio(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
@@ -265,19 +302,52 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                   placeholder="Captura una idea, enlace o nota..."
                   className="flex-1 bg-secondary text-sm text-foreground placeholder:text-muted-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all"
-                  disabled={isUploadingFile}
+                  disabled={isUploadingFile || audioRecorder.isRecording}
                 />
+                {audioRecorder.isRecording && (
+                  <div className="flex items-center gap-2 px-2 py-1 bg-primary/10 rounded-lg">
+                    <span className="animate-pulse w-2 h-2 rounded-full bg-destructive"></span>
+                    <span className="text-xs font-medium text-primary">{audioRecorder.duration}s</span>
+                  </div>
+                )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingFile || !input.trim()}
+                  disabled={isUploadingFile || audioRecorder.isRecording || !input.trim()}
                   className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-40 transition-all"
                   title="Subir archivo para análisis IA"
                 >
                   {isUploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                 </button>
                 <button
+                  onClick={audioRecorder.isRecording ? handleStopAndTranscribe : audioRecorder.startRecording}
+                  disabled={isUploadingFile || isTranscribingAudio}
+                  className={`p-2 rounded-lg transition-all ${
+                    audioRecorder.isRecording
+                      ? 'bg-destructive text-destructive-foreground hover:scale-105'
+                      : 'bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-40'
+                  }`}
+                  title={audioRecorder.isRecording ? 'Detener grabación' : 'Grabar audio'}
+                >
+                  {isTranscribingAudio ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : audioRecorder.isRecording ? (
+                    <StopCircle className="w-4 h-4" />
+                  ) : (
+                    <Mic className="w-4 h-4" />
+                  )}
+                </button>
+                {audioRecorder.isStopped && (
+                  <button
+                    onClick={audioRecorder.resetRecording}
+                    className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+                    title="Limpiar grabación"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+                <button
                   onClick={handleSubmit}
-                  disabled={!input.trim() || isUploadingFile}
+                  disabled={!input.trim() || isUploadingFile || isTranscribingAudio}
                   className="p-2 rounded-lg gradient-primary text-primary-foreground disabled:opacity-40 hover:scale-105 transition-transform"
                 >
                   <Send className="w-4 h-4" />
@@ -286,6 +356,11 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
               {isUploadingFile && (
                 <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
                   <Loader2 className="w-3 h-3 animate-spin" /> Subiendo y analizando con IA...
+                </p>
+              )}
+              {isTranscribingAudio && (
+                <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Transcribiendo audio...
                 </p>
               )}
             </div>

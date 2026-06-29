@@ -381,6 +381,46 @@ async function scrapeGeneric(url: string, html: string): Promise<ScrapedContent>
 // ENRICH URL - Intelligent link processing for inbox
 // ============================================================================
 
+// Transcribe audio to text using Groq Whisper
+app.post('/api/transcribe-audio', async (req, res) => {
+  try {
+    const { audioBase64, mimeType = 'audio/webm' } = req.body;
+    if (!audioBase64) {
+      return res.status(400).json({ error: 'audioBase64 required' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'LLM API key not configured' });
+    }
+
+    // Convert base64 to Buffer
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+
+    // Use Groq's Whisper model for transcription
+    const formData = new FormData();
+    formData.append('file', new Blob([audioBuffer], { type: mimeType }), 'audio.webm');
+    formData.append('model', 'whisper-large-v3-turbo');
+
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/audio/transcriptions',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          Authorization: `Bearer ${apiKey}`,
+        },
+      }
+    );
+
+    const transcript = response.data.text || '';
+    res.json({ transcript, success: true });
+  } catch (err: any) {
+    console.error('Audio transcription error:', err);
+    res.status(500).json({ error: err.message || 'Failed to transcribe audio' });
+  }
+});
+
 app.post('/api/enrich-url', async (req, res) => {
   try {
     const { url } = req.body;
