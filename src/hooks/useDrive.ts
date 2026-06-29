@@ -70,7 +70,11 @@ export function useDrive() {
     unsubscribers.set('folders', onSnapshot(
       query(collection(db, 'user_folders'), where('userId', '==', user.uid)),
       (snapshot) => {
-        setFolders(snapshot.docs.map(mapFolder).sort((a, b) => a.name.localeCompare(b.name)));
+        setFolders(
+          snapshot.docs
+            .map((doc) => mapFolder({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        );
       },
       (error) => {
         console.error('❌ Folders listener error:', error);
@@ -85,7 +89,7 @@ export function useDrive() {
           const fileId = doc.id;
           const fileTags = files.find(f => f.id === fileId)?.tags || [];
           return mapFile({ id: doc.id, ...doc.data() }, fileTags);
-        }).sort((a, b) => a.name.localeCompare(b.name)));
+        }).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       },
       (error) => {
         console.error('❌ Files listener error:', error);
@@ -118,7 +122,7 @@ export function useDrive() {
     unsubscribers.set('links', onSnapshot(
       query(collection(db, 'user_file_links'), where('userId', '==', user.uid)),
       (snapshot) => {
-        setLinks(snapshot.docs.map(mapLink));
+        setLinks(snapshot.docs.map((doc) => mapLink({ id: doc.id, ...doc.data() })));
       },
       (error) => {
         console.error('❌ Links listener error:', error);
