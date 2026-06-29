@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UseAudioRecorderReturn {
   isRecording: boolean;
@@ -11,23 +11,46 @@ interface UseAudioRecorderReturn {
 }
 
 export function useAudioRecorder(): UseAudioRecorderReturn {
-  // All states declared at the top - consistent order
   const [isRecording, setIsRecording] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  // All refs declared after states
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef('');
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'es-ES';
+    }
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
+      transcriptRef.current = '';
+
+      // Start speech recognition in parallel
+      if (recognitionRef.current) {
+        recognitionRef.current.onresult = (event: any) => {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              transcriptRef.current += event.results[i][0].transcript + ' ';
+            }
+          }
+        };
+        recognitionRef.current.start();
+      }
 
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = (e) => {
@@ -59,47 +82,21 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       const mediaRecorder = mediaRecorderRef.current;
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         streamRef.current?.getTracks().forEach((track) => track.stop());
         setIsRecording(false);
         setIsStopped(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        // Transcribe using server endpoint
-        setIsTranscribing(true);
-        try {
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-          const reader = new FileReader();
-
-          reader.onloadend = async () => {
-            try {
-              const base64Audio = (reader.result as string).split(',')[1];
-              const response = await fetch('/api/transcribe-audio', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/webm' }),
-              });
-
-              if (!response.ok) {
-                throw new Error(`Transcription failed: ${response.statusText}`);
-              }
-
-              const data = await response.json();
-              setIsTranscribing(false);
-              resolve(data.transcript || '');
-            } catch (err) {
-              console.error('Transcription error:', err);
-              setIsTranscribing(false);
-              resolve('');
-            }
-          };
-
-          reader.readAsDataURL(blob);
-        } catch (err) {
-          console.error('Error in stopRecording:', err);
-          setIsTranscribing(false);
-          resolve('');
+        // Stop speech recognition
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
         }
+
+        // Return accumulated transcript
+        const finalTranscript = transcriptRef.current.trim();
+        setIsTranscribing(false);
+        resolve(finalTranscript);
       };
 
       mediaRecorder.stop();
@@ -112,7 +109,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     setDuration(0);
     setIsTranscribing(false);
     chunksRef.current = [];
+    transcriptRef.current = '';
     if (intervalRef.current) clearInterval(intervalRef.current);
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
   }, []);
 
   return {
