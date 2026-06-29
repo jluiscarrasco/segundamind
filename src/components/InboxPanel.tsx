@@ -312,7 +312,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                   }`}
                   title={audioRecorder.isRecording ? 'Detener grabación' : 'Grabar audio'}
                 >
-                  {isTranscribingAudio ? (
+                  {audioRecorder.isTranscribing ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : audioRecorder.isRecording ? (
                     <StopCircle className="w-4 h-4" />
@@ -331,7 +331,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                 )}
                 <button
                   onClick={handleSubmit}
-                  disabled={!input.trim() || isUploadingFile || isTranscribingAudio}
+                  disabled={!input.trim() || isUploadingFile || audioRecorder.isTranscribing}
                   className="p-2 rounded-lg gradient-primary text-primary-foreground disabled:opacity-40 hover:scale-105 transition-transform"
                 >
                   <Send className="w-4 h-4" />
