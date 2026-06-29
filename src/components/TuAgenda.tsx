@@ -180,50 +180,111 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
     );
   }
 
+  // Build all items for calendar
+  const allItems = [...overdue, ...today, ...upcoming];
+  const dateRangeItems = allItems.reduce(
+    (acc, item) => {
+      const date = item.reviewDate;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(item);
+      return acc;
+    },
+    {} as Record<string, AgendaItem[]>
+  );
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* VENCIDAS */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-destructive/8 border-b border-destructive/10">
-          <h3 className="text-[11px] font-semibold text-destructive uppercase tracking-wide flex items-center gap-1">
-            {overdue.length > 0 && <AlertTriangle className="w-3 h-3" />}
-            Vencidas ({overdue.length})
-          </h3>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* VENCIDAS */}
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
+          <div className="px-4 py-3 bg-destructive/8 border-b border-destructive/10">
+            <h3 className="text-[11px] font-semibold text-destructive uppercase tracking-wide flex items-center gap-1">
+              {overdue.length > 0 && <AlertTriangle className="w-3 h-3" />}
+              Vencidas ({overdue.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
+            {overdue.length === 0 ? (
+              <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
+            ) : (
+              overdue.map((item, i) => renderItem(item, i, 'overdue'))
+            )}
+          </div>
         </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {overdue.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
-          ) : (
-            overdue.map((item, i) => renderItem(item, i, 'overdue'))
-          )}
+
+        {/* PARA HOY */}
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
+          <div className="px-4 py-3 bg-primary/8 border-b border-primary/10">
+            <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Para Hoy ({today.length})</h3>
+          </div>
+          <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
+            {today.length === 0 ? (
+              <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
+            ) : (
+              today.map((item, i) => renderItem(item, i, 'today'))
+            )}
+          </div>
+        </div>
+
+        {/* PRÓXIMOS 7 DÍAS */}
+        <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
+          <div className="px-4 py-3 bg-secondary/50 border-b border-border">
+            <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Próximos 7d ({upcoming.length})</h3>
+          </div>
+          <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
+            {upcoming.length === 0 ? (
+              <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
+            ) : (
+              upcoming.map((item, i) => renderItem(item, i, 'upcoming'))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* PARA HOY */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-primary/8 border-b border-primary/10">
-          <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Para Hoy ({today.length})</h3>
+      {/* CALENDAR VIEW BELOW */}
+      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">📅 Vista Calendario</h3>
         </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {today.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
-          ) : (
-            today.map((item, i) => renderItem(item, i, 'today'))
-          )}
-        </div>
-      </div>
+        <div className="p-4">
+          <div className="grid grid-cols-7 gap-2">
+            {Object.keys(dateRangeItems)
+              .sort()
+              .map((date) => {
+                const items = dateRangeItems[date];
+                const isToday = date === todayKey;
+                const dayName = new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short' });
+                const dayNum = new Date(date + 'T00:00:00').getDate();
 
-      {/* PRÓXIMOS 7 DÍAS */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-secondary/50 border-b border-border">
-          <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Próximos 7d ({upcoming.length})</h3>
-        </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {upcoming.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
-          ) : (
-            upcoming.map((item, i) => renderItem(item, i, 'upcoming'))
-          )}
+                return (
+                  <div
+                    key={date}
+                    className={`p-3 rounded-lg border transition-all ${
+                      isToday ? 'bg-primary/10 border-primary/50' : 'bg-secondary/30 border-border hover:border-primary/30'
+                    }`}
+                  >
+                    <div className="text-center mb-2">
+                      <div className={`text-[10px] font-semibold uppercase ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {dayName}
+                      </div>
+                      <div className={`text-sm font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>{dayNum}</div>
+                    </div>
+                    <div className="space-y-1">
+                      {items.map((item) => (
+                        <div
+                          key={`${item.type}-${item.id}`}
+                          onClick={() => onEditEntity(item.type, item.id)}
+                          className="text-[10px] px-2 py-1 rounded bg-background border border-border/50 cursor-pointer hover:bg-primary/10 hover:border-primary/30 transition-colors truncate"
+                          title={item.name}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       </div>
     </div>
