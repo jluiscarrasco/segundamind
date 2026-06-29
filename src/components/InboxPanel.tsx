@@ -260,7 +260,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.doc,.docx"
+                accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.doc,.docx,audio/*,.mp3,.wav,.m4a,.ogg,.webm"
                 onChange={handleFileUpload}
                 className="hidden"
               />
