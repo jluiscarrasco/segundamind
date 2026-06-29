@@ -393,6 +393,16 @@ const Index = () => {
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
                   <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} />
+                  <CalendarView
+                    tasks={filteredTasks}
+                    projects={filteredProjects}
+                    areas={filteredAreas}
+                    onEditEntity={handleEditEntity}
+                    onPostpone={handlePostpone}
+                    onUpdateTaskDate={(id, date) => store.updateTask(id, { reviewDate: date })}
+                    onUpdateProjectDate={(id, date) => store.updateProject(id, { reviewDate: date })}
+                    onUpdateAreaDate={(id, date) => store.updateArea(id, { reviewDate: date })}
+                  />
                   <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
 
