@@ -23,13 +23,12 @@ import { BacklogView } from '@/components/BacklogView';
 import { KnowledgeBaseView } from '@/components/KnowledgeBaseView';
 import { FilesView } from '@/components/FilesView';
 import { MobileNoteCaptureView } from '@/components/MobileNoteCaptureView';
-import { AiAssistantView } from '@/components/AiAssistantView';
 
 import { useStore } from '@/store/useStore';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
-import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
 import { addDaysCETKey } from '@/lib/dateUtils';
 
 type ModalState =
@@ -39,7 +38,7 @@ type ModalState =
   | { mode: 'create'; type: 'task'; projectId: string }
   | { mode: 'edit'; type: EntityType; id: string };
 
-type ViewMode = 'dashboard' | 'kanban' | 'calendar' | 'backlog' | 'knowledge' | 'files' | 'assistant';
+type ViewMode = 'dashboard' | 'kanban' | 'calendar' | 'backlog' | 'knowledge' | 'files';
 
 const Index = () => {
   const store = useStore();
@@ -295,17 +294,6 @@ const Index = () => {
               <FolderArchive className="w-3.5 h-3.5" />
               Archivos
             </button>
-            <button
-              onClick={() => setViewMode('assistant')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'assistant'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Asistente
-            </button>
           </div>
         </header>
 
@@ -317,8 +305,6 @@ const Index = () => {
           />
         ) : viewMode === 'files' ? (
           <FilesView />
-        ) : viewMode === 'assistant' ? (
-          <AiAssistantView />
         ) : viewMode === 'kanban' ? (
           <div className="p-6 space-y-4">
             <KanbanBoard
