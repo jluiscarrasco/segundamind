@@ -5,17 +5,19 @@ interface UseAudioRecorderReturn {
   isStopped: boolean;
   duration: number;
   startRecording: () => Promise<void>;
-  stopRecording: () => Promise<string | null>; // Returns transcript
+  stopRecording: () => Promise<string>;
   resetRecording: () => void;
   isTranscribing: boolean;
 }
 
 export function useAudioRecorder(): UseAudioRecorderReturn {
+  // All states declared at the top - consistent order
   const [isRecording, setIsRecording] = useState(false);
   const [isStopped, setIsStopped] = useState(false);
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  // All refs declared after states
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -40,7 +42,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setIsStopped(false);
       setDuration(0);
 
-      // Track duration
       intervalRef.current = setInterval(() => {
         setDuration((d) => d + 1);
       }, 1000);
@@ -49,10 +50,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     }
   }, []);
 
-  const stopRecording = useCallback(async (): Promise<string | null> => {
+  const stopRecording = useCallback(async (): Promise<string> => {
     return new Promise((resolve) => {
       if (!mediaRecorderRef.current || !streamRef.current) {
-        resolve(null);
+        resolve('');
         return;
       }
 
@@ -64,55 +65,36 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setIsStopped(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        // Use Web Speech API for transcription (runs in browser, no server needed)
+        // Transcribe using server endpoint
         setIsTranscribing(true);
         try {
-          const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-          if (!SpeechRecognition) {
-            console.log('Speech Recognition not supported, returning empty');
-            setIsTranscribing(false);
-            resolve('');
-            return;
-          }
-
           const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
-          const audioUrl = URL.createObjectURL(blob);
+          const reader = new FileReader();
 
-          // Create audio element and let Web Speech API process it
-          const audio = new Audio(audioUrl);
+          reader.onloadend = async () => {
+            try {
+              const base64Audio = (reader.result as string).split(',')[1];
+              const response = await fetch('/api/transcribe-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/wav' }),
+              });
 
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'es-ES';
+              if (!response.ok) {
+                throw new Error(`Transcription failed: ${response.statusText}`);
+              }
 
-          let transcript = '';
-
-          recognition.onresult = (event: any) => {
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              transcript += event.results[i][0].transcript;
+              const data = await response.json();
+              setIsTranscribing(false);
+              resolve(data.transcript || '');
+            } catch (err) {
+              console.error('Transcription error:', err);
+              setIsTranscribing(false);
+              resolve('');
             }
           };
 
-          recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error);
-            setIsTranscribing(false);
-            resolve(transcript || '');
-          };
-
-          recognition.onend = () => {
-            setIsTranscribing(false);
-            resolve(transcript || '');
-          };
-
-          // Start recognition
-          audio.onended = () => {
-            recognition.stop();
-          };
-
-          recognition.start();
-          audio.play();
+          reader.readAsDataURL(blob);
         } catch (err) {
           console.error('Error in stopRecording:', err);
           setIsTranscribing(false);
