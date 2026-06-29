@@ -30,10 +30,10 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center mx-auto mb-3">
-            <Brain className="w-6 h-6 text-primary-foreground" />
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Brain className="w-6 h-6 text-primary" />
+            <h1 className="text-lg font-semibold text-foreground tracking-tight">JL's Brain</h1>
           </div>
-          <h1 className="text-lg font-semibold text-foreground tracking-tight">MyBrain</h1>
           <p className="text-xs text-muted-foreground mt-1">
             Tu segundo cerebro para gestionar conocimiento
           </p>

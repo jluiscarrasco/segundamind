@@ -39,11 +39,11 @@ export default function InstallPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="max-w-sm w-full space-y-8 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Brain className="w-10 h-10 text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-2">
+            <Brain className="w-6 h-6 text-primary" />
+            <h1 className="text-xl font-bold text-foreground">JL's Brain</h1>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">MyBrain</h1>
           <p className="text-muted-foreground text-sm">
             Captura ideas y notas al instante desde tu móvil.
           </p>
@@ -53,7 +53,7 @@ export default function InstallPage() {
           <div className="bg-card border border-border rounded-xl p-6 space-y-3">
             <p className="text-foreground font-medium">✅ App instalada</p>
             <p className="text-muted-foreground text-sm">
-              Abre MyBrain desde tu pantalla de inicio.
+              Abre JL's Brain desde tu pantalla de inicio.
             </p>
           </div>
         ) : deferredPrompt ? (

@@ -201,7 +201,7 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
         </button>
         <div className="flex items-center gap-2">
           <Brain className="w-6 h-6 text-primary" />
-          <h1 className="text-lg font-bold text-foreground tracking-tight">MyBrain</h1>
+          <h1 className="text-lg font-bold text-foreground tracking-tight">JL's Brain</h1>
         </div>
         <button
           onClick={async () => {
@@ -228,9 +228,9 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground">
                   {isIOS ? (
-                    <>Instala MyBrain: pulsa <Share className="inline w-3.5 h-3.5 -mt-0.5 text-primary" /> y luego <span className="font-semibold">"Añadir a pantalla de inicio"</span></>
+                    <>Instala JL's Brain: pulsa <Share className="inline w-3.5 h-3.5 -mt-0.5 text-primary" /> y luego <span className="font-semibold">"Añadir a pantalla de inicio"</span></>
                   ) : (
-                    <>Instala MyBrain como app para acceso rápido</>
+                    <>Instala JL's Brain como app para acceso rápido</>
                   )}
                 </p>
               </div>

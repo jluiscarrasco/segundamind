@@ -12,6 +12,7 @@ import {
   Settings,
   Bell,
   BellOff,
+  Brain,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -90,8 +91,8 @@ export function AppSidebar({
       {/* Header */}
       <div className="p-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <img src="/icon-192.png" alt="MyBrain" className="w-6 h-6 rounded-lg" />
-          <h1 className="text-sm font-bold text-sidebar-accent-foreground">SEGUNDAMIND</h1>
+          <Brain className="w-5 h-5 text-primary" />
+          <h1 className="text-sm font-bold text-sidebar-accent-foreground">JL'S BRAIN</h1>
         </div>
       </div>
 
