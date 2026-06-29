@@ -66,23 +66,29 @@ export function useDrive() {
 
     const unsubscribers = new Map<string, Unsubscribe>();
 
-    // Folders listener
+    // Folders listener — sort in JS to avoid needing a composite index
     unsubscribers.set('folders', onSnapshot(
-      query(collection(db, 'user_folders'), where('userId', '==', user.uid), orderBy('name')),
+      query(collection(db, 'user_folders'), where('userId', '==', user.uid)),
       (snapshot) => {
-        setFolders(snapshot.docs.map(mapFolder));
+        setFolders(snapshot.docs.map(mapFolder).sort((a, b) => a.name.localeCompare(b.name)));
+      },
+      (error) => {
+        console.error('❌ Folders listener error:', error);
       }
     ));
 
-    // Files listener
+    // Files listener — sort in JS to avoid needing a composite index
     unsubscribers.set('files', onSnapshot(
-      query(collection(db, 'user_files'), where('userId', '==', user.uid), orderBy('name')),
+      query(collection(db, 'user_files'), where('userId', '==', user.uid)),
       (snapshot) => {
         setFiles(snapshot.docs.map((doc) => {
           const fileId = doc.id;
           const fileTags = files.find(f => f.id === fileId)?.tags || [];
-          return mapFile(doc.data(), fileTags);
-        }));
+          return mapFile({ id: doc.id, ...doc.data() }, fileTags);
+        }).sort((a, b) => a.name.localeCompare(b.name)));
+      },
+      (error) => {
+        console.error('❌ Files listener error:', error);
       }
     ));
 
@@ -102,6 +108,9 @@ export function useDrive() {
           ...file,
           tags: tagsByFile.get(file.id) || [],
         })));
+      },
+      (error) => {
+        console.error('❌ Tags listener error:', error);
       }
     ));
 
@@ -110,6 +119,9 @@ export function useDrive() {
       query(collection(db, 'user_file_links'), where('userId', '==', user.uid)),
       (snapshot) => {
         setLinks(snapshot.docs.map(mapLink));
+      },
+      (error) => {
+        console.error('❌ Links listener error:', error);
       }
     ));
 
@@ -234,45 +246,20 @@ export function useDrive() {
     async (file: File, folderId: string | null) => {
       if (!user) return;
 
+      const fileId = crypto.randomUUID();
+      const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
+      const storagePath = `${user.uid}/drive/${fileId}${ext ? '.' + ext : ''}`;
+
       try {
-        // Read file as base64 using FileReader
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64String = result.split(',')[1];
-            resolve(base64String);
-          };
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsDataURL(file);
-        });
-
-        // Use server endpoint to upload (avoids CORS issues)
-        const response = await fetch('http://localhost:8082/api/upload-file', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileBase64: base64,
-            userId: user.uid,
-            folderId: folderId || null,
-            fileName: file.name,
-            mimeType: file.type,
-            fileSize: file.size,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const result = await response.json();
+        // Upload directly to Firebase Storage
+        const fileRef = ref(storage, storagePath);
+        await uploadBytes(fileRef, file, { contentType: file.type || 'application/octet-stream' });
 
         // Create Firestore record
         const docRef = await addDoc(collection(db, 'user_files'), {
-          id: result.fileId,
           folderId,
           name: file.name,
-          storagePath: result.storagePath,
+          storagePath,
           mimeType: file.type || null,
           size: file.size,
           userId: user.uid,
@@ -284,12 +271,14 @@ export function useDrive() {
           id: docRef.id,
           folderId,
           name: file.name,
-          storagePath: result.storagePath,
+          storagePath,
           mimeType: file.type,
           size: file.size,
         }, [])]);
       } catch (error: any) {
         console.error('Upload error:', error);
+        // Clean up storage if Firestore write failed
+        try { await deleteObject(ref(storage, storagePath)); } catch {}
         throw error;
       }
     },

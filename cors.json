@@ -1,0 +1,14 @@
+[
+  {
+    "origin": ["http://localhost:8080", "http://localhost:5173", "https://miclario.com"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "Content-Length",
+      "User-Agent",
+      "x-goog-resumable"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
