@@ -2,9 +2,14 @@ import { useState, useCallback } from 'react';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { AnimatePresence } from 'framer-motion';
 import { AppSidebar } from '@/components/AppSidebar';
-import { EnfoqueHoy } from '@/components/EnfoqueHoy';
-import { RadarRevisiones } from '@/components/RadarRevisiones';
+import { TuAgenda } from '@/components/TuAgenda';
 import { UnprocessedNotes } from '@/components/UnprocessedNotes';
+import { CommandDialog } from '@/components/CommandDialog';
+import { ContextPanel } from '@/components/ContextPanel';
+import { ShortcutsHelpDialog } from '@/components/ShortcutsHelpDialog';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
+import { useContextPanel } from '@/hooks/useContextPanel';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
 import { DashboardStats } from '@/components/DashboardStats';
 import { AreaHealthCards } from '@/components/AreaHealthCards';
@@ -45,6 +50,11 @@ const Index = () => {
   const [modal, setModal] = useState<ModalState>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
 
+  // Command Palette and Context Panel state
+  const commandPalette = useCommandPalette();
+  const contextPanel = useContextPanel();
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
+
   const handleSelectArea = (id: string) => {
     setSelectedAreaId(id);
     setSelectedProjectId(null);
@@ -66,6 +76,31 @@ const Index = () => {
   const handleEditEntity = useCallback((type: EntityType, id: string) => {
     setModal({ mode: 'edit', type, id });
   }, []);
+
+  // Keyboard shortcuts
+  useKeyboardShortcut('CommandPalette', () => {
+    commandPalette.toggle();
+  }, !isMobile);
+
+  useKeyboardShortcut('NewTask', () => {
+    if (selectedProjectId) {
+      setModal({ mode: 'create', type: 'task', projectId: selectedProjectId });
+    }
+  }, !isMobile);
+
+  useKeyboardShortcut('ContextPanel', () => {
+    contextPanel.toggle();
+  }, !isMobile);
+
+  useKeyboardShortcut('Help', () => {
+    setShowHelpDialog(true);
+  }, !isMobile);
+
+  useKeyboardShortcut('Escape', () => {
+    commandPalette.close();
+    contextPanel.close();
+    setShowHelpDialog(false);
+  }, !isMobile);
 
   if (store.loading) {
     return (
@@ -355,15 +390,10 @@ const Index = () => {
                   onOpenInbox={() => setInboxOpen(true)}
                 />
 
-                {/* Enfoque + Radar side by side */}
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                  <div className="lg:col-span-3 space-y-4">
-                    <EnfoqueHoy tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} />
-                    <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
-                  </div>
-                  <div className="lg:col-span-2">
-                    <RadarRevisiones tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} onPostpone={handlePostpone} onEditEntity={handleEditEntity} />
-                  </div>
+                {/* Tu Agenda - unified view */}
+                <div className="space-y-4">
+                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} />
+                  <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
 
                 {/* Recent activity */}
@@ -393,6 +423,43 @@ const Index = () => {
         isOpen={inboxOpen}
         onToggle={() => setInboxOpen(!inboxOpen)}
       />
+
+      {/* Command Palette */}
+      <CommandDialog
+        tasks={store.tasks}
+        projects={store.projects}
+        areas={store.areas}
+        isOpen={commandPalette.isOpen}
+        onClose={commandPalette.close}
+        onEditEntity={handleEditEntity}
+        onCreateTask={(projectId) => setModal({ mode: 'create', type: 'task', projectId })}
+        onCreateProject={(areaId) => setModal({ mode: 'create', type: 'project', areaId })}
+        onCreateArea={() => setModal({ mode: 'create', type: 'area' })}
+      />
+
+      {/* Context Panel */}
+      <ContextPanel
+        isOpen={contextPanel.isOpen}
+        entityType={contextPanel.entityType}
+        entityId={contextPanel.entityId}
+        tasks={store.tasks}
+        projects={store.projects}
+        areas={store.areas}
+        onClose={contextPanel.close}
+        onEdit={(type, id) => {
+          handleEditEntity(type, id);
+          contextPanel.close();
+        }}
+        onDelete={(type, id) => {
+          if (type === 'area') store.deleteArea(id);
+          else if (type === 'project') store.deleteProject(id);
+          else store.deleteTask(id);
+          contextPanel.close();
+        }}
+      />
+
+      {/* Shortcuts Help Dialog */}
+      <ShortcutsHelpDialog isOpen={showHelpDialog} onClose={() => setShowHelpDialog(false)} />
 
       <AnimatePresence>
         {modal && (

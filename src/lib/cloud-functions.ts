@@ -39,6 +39,9 @@ export const cloudFunctions = {
   classifyInbox: (params: any, user: User | null) =>
     callFunction('/classify-inbox', params, user),
 
+  enrichUrl: (params: any, user: User | null) =>
+    callFunction('/enrich-url', params, user),
+
   analyzeAttachment: (params: any, user: User | null) =>
     callFunction('/analyze-attachment', params, user),
 

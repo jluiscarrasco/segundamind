@@ -257,25 +257,8 @@ export function useStore() {
   }, [user]);
 
   const enrichUrlInboxItem = useCallback(async (inboxId: string, url: string) => {
-    if (!user) return;
-    try {
-      const result = await cloudFunctions.scrapeAndSummarize({ url }, user);
-
-      const { title, summary, keyPoints } = result;
-      const parts: string[] = [`🔗 ${url}`];
-      if (title) parts.push(`📋 ${title}`);
-      if (summary) parts.push(summary);
-      if (keyPoints?.length) parts.push(keyPoints.map((p: string) => `• ${p}`).join('\n'));
-
-      const enrichedContent = parts.join('\n\n');
-      await updateDoc(doc(db, 'inbox_items', inboxId), { content: enrichedContent });
-      setData(d => ({
-        ...d,
-        inbox: d.inbox.map(i => i.id === inboxId ? { ...i, content: enrichedContent } : i),
-      }));
-    } catch (err) {
-      console.error('URL enrichment error:', err);
-    }
+    // Don't update inbox content with scraped data
+    // Let user click AI button to get intelligent proposal
   }, []);
 
   const removeInboxItem = useCallback(async (id: string) => {

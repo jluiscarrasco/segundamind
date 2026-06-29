@@ -111,17 +111,27 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
     setClassifying(true);
     setAiReasoning('');
     try {
-      const data = await cloudFunctions.classifyInbox({
-        content,
-        projects,
-        areas,
-      }, user);
+      const isUrl = content.trim().startsWith('http://') || content.trim().startsWith('https://');
 
-      if (data?.projectId && projects.some(p => p.id === data.projectId)) {
-        setSelectedProject(data.projectId);
-        setNoteEntityType('project');
-        setNoteEntityId(data.projectId);
+      let data;
+      if (isUrl) {
+        // For URLs: use intelligent enrichment
+        data = await cloudFunctions.enrichUrl({ url: content.trim() }, user);
+      } else {
+        // For text: use standard classification
+        data = await cloudFunctions.classifyInbox({
+          content,
+          projects,
+          areas,
+        }, user);
+
+        if (data?.projectId && projects.some(p => p.id === data.projectId)) {
+          setSelectedProject(data.projectId);
+          setNoteEntityType('project');
+          setNoteEntityId(data.projectId);
+        }
       }
+
       if (data?.importance) {
         setSelectedImportance(data.importance);
       }

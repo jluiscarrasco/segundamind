@@ -89,25 +89,15 @@ export function AppSidebar({
   const hiddenCount = areas.length - areas.filter((a) => a.status !== "blocked" && a.status !== "finished").length;
 
   return (
-    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden shrink-0">
+    <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden shrink-0">
       {/* Header */}
-      <div className="p-4 border-b border-sidebar-border">
+      <div className="p-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <img src="/icon-192.png" alt="MyBrain" className="w-8 h-8 rounded-lg" />
+          <img src="/icon-192.png" alt="MyBrain" className="w-7 h-7 rounded-lg" />
 
-          <div className="flex items-center justify-between flex-1">
-            <div>
-              <h1 className="text-sm font-semibold text-sidebar-accent-foreground">MyBrain V2.0
-              </h1>
-              <p className="text-[10px] text-muted-foreground">MiClario.com with kownledge</p>
-            </div>
-            <a href="https://www.miclario.com" target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
-            title="Abrir MiClario.com">
-              
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xs font-semibold text-sidebar-accent-foreground truncate">MyBrain</h1>
+            <p className="text-[9px] text-muted-foreground truncate">Productive Brain</p>
           </div>
         </div>
       </div>
