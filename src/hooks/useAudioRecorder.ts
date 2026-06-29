@@ -20,7 +20,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<any>(null);
 
   const startRecording = useCallback(async () => {
     try {
@@ -28,10 +27,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current = stream;
       chunksRef.current = [];
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
-
+      const mediaRecorder = new MediaRecorder(stream);
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
@@ -68,46 +64,59 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setIsStopped(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        // Use Web Speech API for transcription
+        // Use Web Speech API for transcription (runs in browser, no server needed)
         setIsTranscribing(true);
         try {
           const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
           if (!SpeechRecognition) {
-            console.error('Speech Recognition not supported');
+            console.log('Speech Recognition not supported, returning empty');
             setIsTranscribing(false);
-            resolve(null);
+            resolve('');
             return;
           }
 
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
           const audioUrl = URL.createObjectURL(blob);
 
-          // Use a simple approach: let's try to use the API endpoint with base64
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            try {
-              const base64Audio = (reader.result as string).split(',')[1];
-              const response = await fetch('/api/transcribe-audio', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/webm' }),
-              });
+          // Create audio element and let Web Speech API process it
+          const audio = new Audio(audioUrl);
 
-              const data = await response.json();
-              setIsTranscribing(false);
-              resolve(data.transcript || null);
-            } catch (err) {
-              console.error('Transcription error:', err);
-              setIsTranscribing(false);
-              // Fallback: return empty string
-              resolve('');
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'es-ES';
+
+          let transcript = '';
+
+          recognition.onresult = (event: any) => {
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              transcript += event.results[i][0].transcript;
             }
           };
-          reader.readAsDataURL(blob);
+
+          recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsTranscribing(false);
+            resolve(transcript || '');
+          };
+
+          recognition.onend = () => {
+            setIsTranscribing(false);
+            resolve(transcript || '');
+          };
+
+          // Start recognition
+          audio.onended = () => {
+            recognition.stop();
+          };
+
+          recognition.start();
+          audio.play();
         } catch (err) {
           console.error('Error in stopRecording:', err);
           setIsTranscribing(false);
-          resolve(null);
+          resolve('');
         }
       };
 
