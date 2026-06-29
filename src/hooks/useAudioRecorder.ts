@@ -68,7 +68,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         // Transcribe using server endpoint
         setIsTranscribing(true);
         try {
-          const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
           const reader = new FileReader();
 
           reader.onloadend = async () => {
@@ -77,7 +77,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
               const response = await fetch('/api/transcribe-audio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/wav' }),
+                body: JSON.stringify({ audioBase64: base64Audio, mimeType: 'audio/webm' }),
               });
 
               if (!response.ok) {
