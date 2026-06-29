@@ -2,11 +2,30 @@ import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import * as cheerio from 'cheerio';
+import admin from 'firebase-admin';
+import multer from 'multer';
 
 dotenv.config();
 
+// Initialize Firebase Admin
+const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || './serviceAccountKey.json';
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(require(serviceAccountPath)),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'secondbrain-765b9.firebasestorage.app',
+  });
+} catch (e: any) {
+  console.warn('⚠️ Firebase Admin not initialized (OK for dev mode):', e.message);
+}
+
+const bucket = admin.storage().bucket();
+
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Configure multer for file uploads
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Enable CORS for all origins
 app.use((req, res, next) => {
@@ -660,6 +679,47 @@ Responde de forma concisa y útil. Cuando el usuario pida crear/actualizar eleme
   } catch (error: any) {
     res.write('data: ' + JSON.stringify({ error: error.message }) + '\n\n');
     res.end();
+  }
+});
+
+// ============================================================================
+// FILE UPLOAD
+// ============================================================================
+
+app.post('/api/upload-file', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const { userId, folderId, fileName } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId required' });
+    }
+
+    const fileId = require('crypto').randomUUID();
+    const ext = fileName?.includes('.') ? fileName?.split('.').pop() : req.file.originalname.split('.').pop();
+    const storagePath = `${userId}/drive/${fileId}${ext ? '.' + ext : ''}`;
+
+    // Upload to Firebase Storage
+    const file = bucket.file(storagePath);
+    await file.save(req.file.buffer, {
+      metadata: {
+        contentType: req.file.mimetype || 'application/octet-stream',
+      },
+    });
+
+    res.json({
+      success: true,
+      fileId,
+      storagePath,
+      fileName: fileName || req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    });
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -234,23 +234,31 @@ export function useDrive() {
     async (file: File, folderId: string | null) => {
       if (!user) return;
 
-      const fileId = crypto.randomUUID();
-      const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
-      const storagePath = `${user.uid}/drive/${fileId}${ext ? '.' + ext : ''}`;
-
       try {
-        // Upload to Cloud Storage
-        const fileRef = ref(storage, storagePath);
-        await uploadBytes(fileRef, file, {
-          contentType: file.type,
+        // Use server endpoint to upload (avoids CORS issues)
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', user.uid);
+        formData.append('folderId', folderId || '');
+        formData.append('fileName', file.name);
+
+        const response = await fetch('/api/upload-file', {
+          method: 'POST',
+          body: formData,
         });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
 
         // Create Firestore record
         const docRef = await addDoc(collection(db, 'user_files'), {
-          id: fileId,
+          id: result.fileId,
           folderId,
           name: file.name,
-          storagePath,
+          storagePath: result.storagePath,
           mimeType: file.type || null,
           size: file.size,
           userId: user.uid,
@@ -262,17 +270,12 @@ export function useDrive() {
           id: docRef.id,
           folderId,
           name: file.name,
-          storagePath,
+          storagePath: result.storagePath,
           mimeType: file.type,
           size: file.size,
         }, [])]);
-      } catch (error) {
-        // Cleanup storage on error
-        try {
-          await deleteObject(ref(storage, storagePath));
-        } catch (e) {
-          console.warn('Cleanup failed:', e);
-        }
+      } catch (error: any) {
+        console.error('Upload error:', error);
         throw error;
       }
     },
