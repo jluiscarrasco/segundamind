@@ -30,7 +30,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
 import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive, Sparkles } from 'lucide-react';
-import { addDaysCETKey, getTodayKeyCET } from '@/lib/dateUtils';
+import { addDaysCETKey } from '@/lib/dateUtils';
 
 type ModalState =
   | null
@@ -46,7 +46,6 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedQuickView, setSelectedQuickView] = useState<'today' | 'tomorrow' | 'unassigned' | null>(null);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
@@ -59,20 +58,12 @@ const Index = () => {
   const handleSelectArea = (id: string) => {
     setSelectedAreaId(id);
     setSelectedProjectId(null);
-    setSelectedQuickView(null);
   };
 
   const handleSelectProject = (id: string) => {
     const project = store.projects.find(p => p.id === id);
     if (project) setSelectedAreaId(project.areaId);
     setSelectedProjectId(id);
-    setSelectedQuickView(null);
-  };
-
-  const handleSelectQuickView = (view: 'today' | 'tomorrow' | 'unassigned') => {
-    setSelectedQuickView(selectedQuickView === view ? null : view);
-    setSelectedAreaId(null);
-    setSelectedProjectId(null);
   };
 
   const handlePostpone = useCallback((type: 'area' | 'project' | 'task', id: string, days: number) => {
@@ -168,7 +159,7 @@ const Index = () => {
 
   const selectedArea = selectedAreaId ? store.areas.find(a => a.id === selectedAreaId) || null : null;
   const selectedProject = selectedProjectId ? store.projects.find(p => p.id === selectedProjectId) || null : null;
-  const showDashboard = !selectedAreaId && !selectedProjectId && !selectedQuickView;
+  const showDashboard = !selectedAreaId && !selectedProjectId;
 
   // Filtered data based on sidebar selection
   const filteredProjects = selectedProjectId
@@ -179,21 +170,7 @@ const Index = () => {
 
   const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
 
-  let filteredTasks = store.tasks.filter(t => filteredProjectIds.has(t.projectId));
-
-  // Apply Quick View filtering
-  if (selectedQuickView) {
-    const todayKey = getTodayKeyCET();
-    const tomorrowKey = addDaysCETKey(1);
-
-    if (selectedQuickView === 'today') {
-      filteredTasks = filteredTasks.filter(t => t.reviewDate === todayKey && t.status !== 'finished');
-    } else if (selectedQuickView === 'tomorrow') {
-      filteredTasks = filteredTasks.filter(t => t.reviewDate === tomorrowKey && t.status !== 'finished');
-    } else if (selectedQuickView === 'unassigned') {
-      filteredTasks = filteredTasks.filter(t => !t.projectId && t.status !== 'finished' && t.status !== 'blocked');
-    }
-  }
+  const filteredTasks = store.tasks.filter(t => filteredProjectIds.has(t.projectId));
 
   const filteredAreas = selectedAreaId
     ? store.areas.filter(a => a.id === selectedAreaId)
@@ -210,7 +187,6 @@ const Index = () => {
         onSelectProject={handleSelectProject}
         onAddArea={() => setModal({ mode: 'create', type: 'area' })}
         onAddProject={(areaId) => setModal({ mode: 'create', type: 'project', areaId })}
-        onSelectQuickView={handleSelectQuickView}
       />
 
       <main className="flex-1 overflow-y-auto">

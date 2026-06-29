@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Plus,
   FolderOpen,
-  Calendar,
   Lock,
   Eye,
   EyeOff,
@@ -13,7 +12,6 @@ import {
   Settings,
   Bell,
   BellOff,
-  BookMarked,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,7 +21,6 @@ import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { McpAccessDialog } from "./McpAccessDialog";
 import { Plug } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { getTodayKeyCET, addDaysCETKey } from "@/lib/dateUtils";
 
 interface AppSidebarProps {
   areas: Area[];
@@ -34,7 +31,6 @@ interface AppSidebarProps {
   onSelectProject: (id: string) => void;
   onAddArea: () => void;
   onAddProject: (areaId: string) => void;
-  onSelectQuickView?: (view: 'today' | 'tomorrow' | 'unassigned') => void;
 }
 
 function SignOutButton() {
@@ -75,7 +71,6 @@ export function AppSidebar({
   onSelectProject,
   onAddArea,
   onAddProject,
-  onSelectQuickView,
 }: AppSidebarProps) {
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(areas.map((a) => a.id)));
   const [showSettings, setShowSettings] = useState(false);
@@ -89,8 +84,6 @@ export function AppSidebar({
   };
 
   const activeAreas = areas.filter((a) => a.status !== "blocked" && a.status !== "finished");
-  const todayKey = getTodayKeyCET();
-  const tomorrowKey = addDaysCETKey(1);
 
   return (
     <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden shrink-0">
@@ -104,32 +97,6 @@ export function AppSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-3">
-        {/* Quick Views */}
-        <div className="space-y-1">
-          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1">📍 Quick Views</h2>
-          <button
-            onClick={() => onSelectQuickView?.('today')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all group"
-          >
-            <Calendar className="w-4 h-4 text-primary" />
-            <span>Hoy</span>
-          </button>
-          <button
-            onClick={() => onSelectQuickView?.('tomorrow')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all group"
-          >
-            <Calendar className="w-4 h-4 text-orange-500" />
-            <span>Mañana</span>
-          </button>
-          <button
-            onClick={() => onSelectQuickView?.('unassigned')}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all group"
-          >
-            <BookMarked className="w-4 h-4 text-muted-foreground" />
-            <span>Sin asignar</span>
-          </button>
-        </div>
-
         {/* Areas */}
         <div className="space-y-1">
           <div className="flex items-center justify-between px-2 py-1">
