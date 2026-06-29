@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut } from 'lucide-react';
+import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut, Mic, StopCircle, RotateCcw, Paperclip } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { auth, storage } from '@/integrations/firebase/config';
@@ -36,6 +37,7 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const push = usePushNotifications();
+  const audioRecorder = useAudioRecorder();
 
   // Detect if app is installed (standalone) and platform
   useEffect(() => {
@@ -154,6 +156,14 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
     setImagePreview(null);
     setImageFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleStopAndTranscribe = async () => {
+    const transcript = await audioRecorder.stopRecording();
+    if (transcript) {
+      setText((prev) => prev + (prev ? ' ' : '') + transcript);
+      toast.success('Audio transcrito');
+    }
   };
 
   useEffect(() => {
@@ -279,7 +289,7 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.txt,.md,.csv,.json,.xml,.doc,.docx,audio/*,.mp3,.wav,.m4a,.ogg,.webm"
         capture="environment"
         className="hidden"
         onChange={handleImageSelect}
@@ -307,7 +317,19 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
               onKeyDown={handleKeyDown}
               placeholder={imageFile ? 'Añade una descripción (opcional)...' : 'Escribe tu nota...'}
               className="min-h-[80px] resize-none text-base rounded-xl border-border bg-background"
+              disabled={audioRecorder.isRecording}
             />
+            {audioRecorder.isRecording && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
+                <span className="animate-pulse w-2 h-2 rounded-full bg-destructive"></span>
+                <span className="text-xs font-medium text-primary">{audioRecorder.duration}s grabando</span>
+              </div>
+            )}
+            {audioRecorder.isTranscribing && (
+              <p className="text-[10px] text-primary flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> Transcribiendo audio...
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -322,12 +344,42 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
                 size="icon"
                 className="h-8 w-8 text-muted-foreground"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={audioRecorder.isRecording}
               >
-                <ImageIcon className="w-5 h-5" />
+                <Paperclip className="w-5 h-5" />
               </Button>
               <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 transition-all ${
+                  audioRecorder.isRecording
+                    ? 'bg-destructive text-destructive-foreground'
+                    : 'text-muted-foreground'
+                }`}
+                onClick={audioRecorder.isRecording ? handleStopAndTranscribe : audioRecorder.startRecording}
+                disabled={audioRecorder.isTranscribing}
+              >
+                {audioRecorder.isTranscribing ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : audioRecorder.isRecording ? (
+                  <StopCircle className="w-5 h-5" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </Button>
+              {audioRecorder.isStopped && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={audioRecorder.resetRecording}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                </Button>
+              )}
+              <Button
                 onClick={handleSend}
-                disabled={(!text.trim() && !imageFile) || uploading}
+                disabled={(!text.trim() && !imageFile) || uploading || audioRecorder.isTranscribing}
                 size="sm"
                 className="ml-auto gap-2 rounded-xl"
               >
