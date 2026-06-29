@@ -58,13 +58,19 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
-    const isLink = input.startsWith('http://') || input.startsWith('https://');
-    const trimmed = input.trim();
-    const result = await onAdd({ type: isLink ? 'link' : 'note', content: trimmed });
-    if (isLink && result && 'id' in result && onEnrichUrl) {
-      onEnrichUrl(result.id, trimmed);
+    try {
+      const isLink = input.startsWith('http://') || input.startsWith('https://');
+      const trimmed = input.trim();
+      const result = await onAdd({ type: isLink ? 'link' : 'note', content: trimmed });
+      if (isLink && result && 'id' in result && onEnrichUrl) {
+        onEnrichUrl(result.id, trimmed);
+      }
+      setInput('');
+      toast.success('Añadido al inbox');
+    } catch (err: any) {
+      console.error('Error adding to inbox:', err);
+      toast.error(err.message || 'Error al añadir al inbox');
     }
-    setInput('');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
