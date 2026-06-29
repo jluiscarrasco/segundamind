@@ -44,15 +44,10 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const audioRecorder = useAudioRecorder();
 
   const handleStopAndTranscribe = async () => {
-    console.log('📱 handleStopAndTranscribe called');
     const transcript = await audioRecorder.stopRecording();
-    console.log('📝 Received transcript from hook:', transcript);
     if (transcript) {
-      console.log('✅ Setting input with transcript');
       setInput((prev) => prev + (prev ? ' ' : '') + transcript);
       toast.success('Audio transcrito');
-    } else {
-      console.log('❌ No transcript received');
     }
   };
 

@@ -39,27 +39,19 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       streamRef.current = stream;
       chunksRef.current = [];
       transcriptRef.current = '';
-      console.log('✅ Recording started, stream obtained');
 
-      // Start speech recognition in parallel
       if (recognitionRef.current) {
-        console.log('✅ Web Speech API available, starting recognition');
         recognitionRef.current.onresult = (event: any) => {
-          console.log('🎤 Speech result event:', event.results.length, 'results');
           for (let i = event.resultIndex; i < event.results.length; i++) {
             if (event.results[i].isFinal) {
-              const text = event.results[i][0].transcript;
-              transcriptRef.current += text + ' ';
-              console.log('📝 Transcript updated:', transcriptRef.current);
+              transcriptRef.current += event.results[i][0].transcript + ' ';
             }
           }
         };
         recognitionRef.current.onerror = (event: any) => {
-          console.error('❌ Speech recognition error:', event.error);
+          console.error('Speech recognition error:', event.error);
         };
         recognitionRef.current.start();
-      } else {
-        console.warn('⚠️ Web Speech API not available');
       }
 
       const mediaRecorder = new MediaRecorder(stream);
@@ -86,7 +78,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const stopRecording = useCallback(async (): Promise<string> => {
     return new Promise((resolve) => {
       if (!mediaRecorderRef.current || !streamRef.current) {
-        console.log('❌ No recorder or stream');
         resolve('');
         return;
       }
@@ -94,28 +85,23 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       const mediaRecorder = mediaRecorderRef.current;
 
       mediaRecorder.onstop = () => {
-        console.log('⏹️ Recording stopped');
         streamRef.current?.getTracks().forEach((track) => track.stop());
         setIsRecording(false);
         setIsStopped(true);
         if (intervalRef.current) clearInterval(intervalRef.current);
 
-        // Stop speech recognition
         if (recognitionRef.current) {
-          console.log('🛑 Stopping speech recognition');
           recognitionRef.current.stop();
         }
 
-        // Wait a bit for speech recognition to finish processing
+        // Wait for speech recognition to complete processing
         setTimeout(() => {
           const finalTranscript = transcriptRef.current.trim();
-          console.log('✅ Final transcript:', finalTranscript);
           setIsTranscribing(false);
           resolve(finalTranscript);
         }, 300);
       };
 
-      console.log('⏹️ Calling mediaRecorder.stop()');
       mediaRecorder.stop();
     });
   }, []);
