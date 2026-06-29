@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { db, storage } from '@/integrations/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserFolder, UserFile, UserFileLink, EntityType } from '@/types';
@@ -141,35 +141,50 @@ export function useDrive() {
     };
   }, [user, unsubscribersRef]);
 
-  // Seed default folders on first use
+  // One-time cleanup: remove duplicate EMPTY folders (same name + same parent).
+  // Auto-seeding previously created duplicates on every reload; this self-heals.
+  const cleanedRef = useRef(false);
   useEffect(() => {
-    if (!user || loading) return;
-    const hasRoot = folders.some(f => f.parentId === null);
-    if (!hasRoot && folders.length === 0 && files.length === 0) {
-      (async () => {
-        const batch = writeBatch(db);
-        const workRef = doc(collection(db, 'user_folders'));
-        const personalRef = doc(collection(db, 'user_folders'));
+    if (!user || loading || cleanedRef.current) return;
+    if (folders.length === 0) return;
 
-        batch.set(workRef, {
-          name: 'Trabajo',
-          parentId: null,
-          userId: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+    // Group folders by parentId|name
+    const groups = new Map<string, UserFolder[]>();
+    folders.forEach(f => {
+      const key = `${f.parentId ?? 'root'}|${f.name}`;
+      const list = groups.get(key) || [];
+      list.push(f);
+      groups.set(key, list);
+    });
 
-        batch.set(personalRef, {
-          name: 'Personal',
-          parentId: null,
-          userId: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+    // Find duplicates whose extras are empty (no subfolders, no files)
+    const toDelete: string[] = [];
+    groups.forEach(list => {
+      if (list.length <= 1) return;
+      // Keep the first, evaluate the rest
+      list.slice(1).forEach(dup => {
+        const hasSubfolder = folders.some(f => f.parentId === dup.id);
+        const hasFiles = files.some(f => f.folderId === dup.id);
+        if (!hasSubfolder && !hasFiles) toDelete.push(dup.id);
+      });
+    });
 
-        await batch.commit();
-      })();
+    if (toDelete.length === 0) {
+      cleanedRef.current = true;
+      return;
     }
+
+    cleanedRef.current = true;
+    (async () => {
+      try {
+        const batch = writeBatch(db);
+        toDelete.forEach(id => batch.delete(doc(db, 'user_folders', id)));
+        await batch.commit();
+        console.log(`🧹 Removed ${toDelete.length} duplicate empty folders`);
+      } catch (e) {
+        console.error('Cleanup failed:', e);
+      }
+    })();
   }, [user, loading, folders, files]);
 
   // --- Folders ---
