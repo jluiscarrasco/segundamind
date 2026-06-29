@@ -40,41 +40,19 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const [noteEntityType, setNoteEntityType] = useState<EntityType>('project');
   const [noteEntityId, setNoteEntityId] = useState('');
   const [isUploadingFile, setIsUploadingFile] = useState(false);
-  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRecorder = useAudioRecorder();
 
   const handleStopAndTranscribe = async () => {
-    const audioBlob = await audioRecorder.stopRecording();
-    if (!audioBlob) return;
-
-    setIsTranscribingAudio(true);
-    try {
-      const audioBase64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-        reader.readAsDataURL(audioBlob);
-      });
-
-      const response = await fetch('/api/transcribe-audio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioBase64, mimeType: 'audio/webm' }),
-      });
-
-      const data = await response.json();
-      if (data.transcript) {
-        setInput(data.transcript);
-        toast.success('Audio transcrito correctamente');
-      }
-    } catch (err: any) {
-      console.error('Transcription error:', err);
+    const transcript = await audioRecorder.stopRecording();
+    if (!transcript) {
       toast.error('Error al transcribir audio');
-    } finally {
-      setIsTranscribingAudio(false);
+      return;
+    }
+
+    if (transcript.trim()) {
+      setInput(transcript);
+      toast.success('Audio transcrito correctamente');
     }
   };
 
@@ -320,7 +298,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                 </button>
                 <button
                   onClick={audioRecorder.isRecording ? handleStopAndTranscribe : audioRecorder.startRecording}
-                  disabled={isUploadingFile || isTranscribingAudio}
+                  disabled={isUploadingFile || audioRecorder.isTranscribing}
                   className={`p-2 rounded-lg transition-all ${
                     audioRecorder.isRecording
                       ? 'bg-destructive text-destructive-foreground hover:scale-105'
@@ -358,7 +336,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                   <Loader2 className="w-3 h-3 animate-spin" /> Subiendo y analizando con IA...
                 </p>
               )}
-              {isTranscribingAudio && (
+              {audioRecorder.isTranscribing && (
                 <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
                   <Loader2 className="w-3 h-3 animate-spin" /> Transcribiendo audio...
                 </p>

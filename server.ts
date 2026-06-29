@@ -397,9 +397,10 @@ app.post('/api/transcribe-audio', async (req, res) => {
     // Convert base64 to Buffer
     const audioBuffer = Buffer.from(audioBase64, 'base64');
 
-    // Use Groq's Whisper model for transcription
+    // Use Groq's Whisper model for transcription via OpenAI-compatible API
+    const FormData = require('form-data');
     const formData = new FormData();
-    formData.append('file', new Blob([audioBuffer], { type: mimeType }), 'audio.webm');
+    formData.append('file', audioBuffer, { filename: 'audio.webm', contentType: mimeType });
     formData.append('model', 'whisper-large-v3-turbo');
 
     const response = await axios.post(
@@ -416,8 +417,8 @@ app.post('/api/transcribe-audio', async (req, res) => {
     const transcript = response.data.text || '';
     res.json({ transcript, success: true });
   } catch (err: any) {
-    console.error('Audio transcription error:', err);
-    res.status(500).json({ error: err.message || 'Failed to transcribe audio' });
+    console.error('Audio transcription error:', err?.response?.data || err.message);
+    res.status(500).json({ error: err?.response?.data?.error?.message || err.message || 'Failed to transcribe audio' });
   }
 });
 
