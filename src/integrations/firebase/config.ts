@@ -31,11 +31,15 @@ const appCheck = recaptchaSiteKey
 // Returns a fresh App Check token to attach to outgoing API calls, or null
 // if App Check isn't configured (e.g. local dev without the site key).
 export async function getAppCheckHeader(): Promise<string | null> {
-  if (!appCheck) return null;
+  if (!appCheck) {
+    console.warn('[AppCheck] Not initialized (missing VITE_RECAPTCHA_SITE_KEY)');
+    return null;
+  }
   try {
     const { token } = await getAppCheckToken(appCheck);
     return token;
-  } catch {
+  } catch (e) {
+    console.error('[AppCheck] getToken failed:', e);
     return null;
   }
 }
