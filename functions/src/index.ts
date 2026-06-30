@@ -374,6 +374,10 @@ Item: "${content}"
 Available projects: ${projects.join(', ')}
 Available areas: ${areas.join(', ')}
 
+IMPORTANT: Write "suggestedName", "suggestedDescription" and "reasoning" in
+the SAME LANGUAGE as the item content above (if the item is in Spanish, answer
+in Spanish). Keep the JSON keys and the enum values exactly as specified.
+
 Respond with JSON: {
   "suggestedName": "...",
   "suggestedDescription": "...",
