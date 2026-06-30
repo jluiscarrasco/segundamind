@@ -4,6 +4,7 @@
   "description": "Firebase Cloud Functions for Segundo Cerebro",
   "main": "lib/index.js",
   "scripts": {
+    "build": "tsc",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
@@ -18,10 +19,12 @@
     "firebase-functions": "^5.0.0",
     "@google-cloud/aiplatform": "^3.0.0",
     "axios": "^1.6.0",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^1.0.0-rc.12",
+    "express": "^4.19.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/express": "^4.17.21",
     "typescript": "^5.0.0"
   }
 }

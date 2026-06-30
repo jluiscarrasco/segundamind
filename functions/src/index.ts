@@ -2,10 +2,42 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import express from 'express';
 
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
+
+// ============================================================================
+// EXPRESS APP — single function serving all /api/* routes with CORS
+// ============================================================================
+
+const ALLOWED_ORIGINS = [
+  'https://segundamind.vercel.app',
+  'http://localhost:8080',
+  'http://localhost:5173',
+];
+
+const app = express();
+app.use(express.json({ limit: '10mb' }));
+
+// CORS
+app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+  }
+  res.set('Vary', 'Origin');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+  next();
+});
+
+const router = express.Router();
 
 // Helper: verify Firebase ID token
 async function verifyToken(authHeader: string): Promise<string> {
@@ -49,7 +81,7 @@ async function callAI(prompt: string, systemPrompt?: string) {
 // PUSH NOTIFICATIONS
 // ============================================================================
 
-exports.pushSubscribe = functions.https.onRequest(async (req, res) => {
+router.post('/push-subscribe', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { action, subscription, endpoint } = req.body;
@@ -90,7 +122,7 @@ exports.pushSubscribe = functions.https.onRequest(async (req, res) => {
 // AI ASSISTANT - Chat with access to areas, projects, tasks
 // ============================================================================
 
-exports.aiAssistant = functions.https.onRequest(async (req, res) => {
+router.post('/ai-assistant', async (req, res) => {
   res.set('Content-Type', 'text/event-stream');
   res.set('Cache-Control', 'no-cache');
   res.set('Connection', 'keep-alive');
@@ -145,7 +177,7 @@ Responde de forma concisa y útil. Cuando el usuario pida crear/actualizar eleme
 // WIKI CHAT - Answer questions based on wiki pages
 // ============================================================================
 
-exports.wikiChat = functions.https.onRequest(async (req, res) => {
+router.post('/wiki-chat', async (req, res) => {
   res.set('Content-Type', 'text/event-stream');
   try {
     const userId = await verifyToken(req.headers.authorization || '');
@@ -188,7 +220,7 @@ Responde basándote únicamente en la información de la wiki. Si no encuentras 
 // WIKI GENERATE - AI generates wiki page content
 // ============================================================================
 
-exports.wikiGenerate = functions.https.onRequest(async (req, res) => {
+router.post('/wiki-generate', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { title, entityType, entityId } = req.body;
@@ -231,7 +263,7 @@ Write in markdown format. Include:
 // WIKI EDIT - AI edits existing wiki page
 // ============================================================================
 
-exports.wikiEdit = functions.https.onRequest(async (req, res) => {
+router.post('/wiki-edit', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { pageId, instruction } = req.body;
@@ -276,7 +308,7 @@ Return the updated content in markdown format.`;
 // CLASSIFY INBOX - AI categorizes inbox items
 // ============================================================================
 
-exports.classifyInbox = functions.https.onRequest(async (req, res) => {
+router.post('/classify-inbox', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { content, projects: clientProjects = [], areas: clientAreas = [] } = req.body;
@@ -473,7 +505,7 @@ async function scrapeGeneric(url: string, html: string): Promise<ScrapedContent>
 // ENRICH URL - Intelligent link processing for inbox
 // ============================================================================
 
-exports.enrichUrl = functions.https.onRequest(async (req, res) => {
+router.post('/enrich-url', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { url } = req.body;
@@ -588,7 +620,7 @@ Responde con JSON: {
 // SCRAPE AND SUMMARIZE - Fetch URL content and summarize
 // ============================================================================
 
-exports.scrapeAndSummarize = functions.https.onRequest(async (req, res) => {
+router.post('/scrape-and-summarize', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { url } = req.body;
@@ -684,7 +716,7 @@ Responde con JSON: {
 // ANALYZE ATTACHMENT - AI analyzes uploaded files
 // ============================================================================
 
-exports.analyzeAttachment = functions.https.onRequest(async (req, res) => {
+router.post('/analyze-attachment', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { fileUrl, mimeType, currentName, currentDescription } = req.body;
@@ -806,7 +838,7 @@ Respond with JSON: {
 // WIKI SUGGEST STRUCTURE - AI suggests wiki page organization
 // ============================================================================
 
-exports.wikiSuggestStructure = functions.https.onRequest(async (req, res) => {
+router.post('/wiki-suggest-structure', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     const { pages, entityName, entityType } = req.body;
@@ -855,7 +887,7 @@ Respond with JSON: {
 // MCP - Model Context Protocol server
 // ============================================================================
 
-exports.mcp = functions.https.onRequest(async (req, res) => {
+router.all('/mcp', async (req, res) => {
   try {
     const { action, path, method, body } = req.body;
 
@@ -932,3 +964,11 @@ exports.mcp = functions.https.onRequest(async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Mount the router at both /api and / so it works whether or not the
+// Cloud Functions function-name prefix ("/api") is stripped from the path.
+app.use('/api', router);
+app.use('/', router);
+
+// Single HTTPS function serving every route above.
+exports.api = functions.https.onRequest(app);
