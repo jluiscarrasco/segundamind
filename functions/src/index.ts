@@ -77,6 +77,26 @@ async function callAI(prompt: string, systemPrompt?: string) {
   return response.data.choices?.[0]?.message?.content || '';
 }
 
+// Helper: robustly extract JSON from an LLM response that may be wrapped in
+// prose ("Here's the ...") or markdown code fences.
+function parseJsonResponse(text: string): any {
+  if (!text) throw new Error('Empty AI response');
+  const candidates: string[] = [];
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) candidates.push(fenced[1].trim());
+  const objStart = text.indexOf('{');
+  const objEnd = text.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) candidates.push(text.slice(objStart, objEnd + 1));
+  const arrStart = text.indexOf('[');
+  const arrEnd = text.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) candidates.push(text.slice(arrStart, arrEnd + 1));
+  candidates.push(text.trim());
+  for (const c of candidates) {
+    try { return JSON.parse(c); } catch { /* try next */ }
+  }
+  throw new Error('Could not parse JSON from AI response');
+}
+
 // ============================================================================
 // PUSH NOTIFICATIONS
 // ============================================================================
@@ -364,7 +384,7 @@ Respond with JSON: {
 }`;
 
     const response = await callAI(prompt);
-    const classification = JSON.parse(response);
+    const classification = parseJsonResponse(response);
 
     // Map project name to ID
     const projectId = projectIds[classification.projectName] || '';
@@ -603,7 +623,7 @@ Responde con JSON: {
 }`;
 
     const aiResponse = await callAI(prompt);
-    const result = JSON.parse(aiResponse);
+    const result = parseJsonResponse(aiResponse);
 
     if (scrapedContent.imageUrl) {
       result.imageUrl = scrapedContent.imageUrl;
@@ -700,7 +720,7 @@ Responde con JSON: {
 }`;
 
     const aiResponse = await callAI(prompt);
-    const result = JSON.parse(aiResponse);
+    const result = parseJsonResponse(aiResponse);
 
     if (scrapedContent.imageUrl) {
       result.imageUrl = scrapedContent.imageUrl;
@@ -786,7 +806,7 @@ Respond with JSON: {
           }
         );
 
-        result = JSON.parse(response.data.choices?.[0]?.message?.content || '{}');
+        result = parseJsonResponse(response.data.choices?.[0]?.message?.content || '{}');
       } else {
         // For non-image files: fetch as text
         let fileContent = '';
@@ -813,7 +833,7 @@ Respond with JSON: {
 }`;
 
         const response = await callAI(prompt);
-        result = JSON.parse(response);
+        result = parseJsonResponse(response);
       }
     } catch (aiError: any) {
       console.error('AI API error:', aiError.message);
@@ -875,7 +895,7 @@ Respond with JSON: {
 }`;
 
     const response = await callAI(prompt);
-    const result = JSON.parse(response);
+    const result = parseJsonResponse(response);
 
     res.json(result);
   } catch (error: any) {
