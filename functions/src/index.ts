@@ -53,6 +53,48 @@ async function verifyToken(authHeader: string): Promise<string> {
   }
 }
 
+// Helper: per-user sliding-window rate limit for AI endpoints (Firestore-backed
+// so it works correctly across Cloud Functions cold starts/instances).
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 20; // AI calls per user per minute, across all AI endpoints
+
+class RateLimitError extends Error {
+  constructor() {
+    super('Demasiadas peticiones. Espera un minuto e inténtalo de nuevo.');
+    this.name = 'RateLimitError';
+  }
+}
+
+async function checkRateLimit(userId: string): Promise<void> {
+  const ref = db.collection('rate_limits').doc(userId);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const now = Date.now();
+    const data = doc.data();
+
+    if (!doc.exists || !data || now - data.windowStart > RATE_LIMIT_WINDOW_MS) {
+      tx.set(ref, { windowStart: now, count: 1 });
+      return;
+    }
+
+    if (data.count >= RATE_LIMIT_MAX) {
+      throw new RateLimitError();
+    }
+
+    tx.update(ref, { count: admin.firestore.FieldValue.increment(1) });
+  });
+}
+
+// Helper: send the right status code for a caught error (429 for rate limit,
+// 400 for everything else — keeps every route's catch block one-liner).
+function sendError(res: express.Response, error: any) {
+  if (error instanceof RateLimitError) {
+    res.status(429).json({ error: error.message });
+    return;
+  }
+  res.status(400).json({ error: error.message });
+}
+
 // Helper: call LLM API (Groq - Llama 3.3)
 async function callAI(prompt: string, systemPrompt?: string) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -149,6 +191,7 @@ router.post('/ai-assistant', async (req, res) => {
 
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { messages } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -201,6 +244,7 @@ router.post('/wiki-chat', async (req, res) => {
   res.set('Content-Type', 'text/event-stream');
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { messages } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -243,6 +287,7 @@ Responde basándote únicamente en la información de la wiki. Si no encuentras 
 router.post('/wiki-generate', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { title, entityType, entityId } = req.body;
 
     if (!title) {
@@ -277,7 +322,7 @@ IMPORTANT: Write the entire page in the SAME LANGUAGE as the title above (if the
 
     res.json({ id: docRef.id, content });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -288,6 +333,7 @@ IMPORTANT: Write the entire page in the SAME LANGUAGE as the title above (if the
 router.post('/wiki-edit', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { pageId, instruction } = req.body;
 
     if (!pageId || !instruction) {
@@ -323,7 +369,7 @@ IMPORTANT: Write in the SAME LANGUAGE as the current content above (if it is in 
 
     res.json({ content: updatedContent });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -334,6 +380,7 @@ IMPORTANT: Write in the SAME LANGUAGE as the current content above (if it is in 
 router.post('/classify-inbox', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { content, projects: clientProjects = [], areas: clientAreas = [] } = req.body;
 
     if (!content) {
@@ -405,7 +452,7 @@ Respond with JSON: {
       reasoning: classification.reasoning,
     });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -535,6 +582,7 @@ async function scrapeGeneric(url: string, html: string): Promise<ScrapedContent>
 router.post('/enrich-url', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { url } = req.body;
 
     if (!url) {
@@ -639,7 +687,7 @@ Responde con JSON: {
 
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -650,6 +698,7 @@ Responde con JSON: {
 router.post('/scrape-and-summarize', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { url } = req.body;
 
     if (!url) {
@@ -735,7 +784,7 @@ Responde con JSON: {
 
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -746,6 +795,7 @@ Responde con JSON: {
 router.post('/analyze-attachment', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { fileUrl, mimeType, currentName, currentDescription } = req.body;
 
     if (!fileUrl) {
@@ -863,7 +913,7 @@ Respond with JSON: {
 
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
@@ -874,6 +924,7 @@ Respond with JSON: {
 router.post('/wiki-suggest-structure', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
+    await checkRateLimit(userId);
     const { pages, entityName, entityType } = req.body;
 
     if (!Array.isArray(pages)) {
@@ -914,7 +965,7 @@ Respond with JSON: {
 
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    sendError(res, error);
   }
 });
 
