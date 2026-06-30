@@ -8,18 +8,22 @@ import { auth, storage } from '@/integrations/firebase/config';
 import { signOut } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
-import type { InboxItem } from '@/types';
+import type { InboxItem, Task, Project, Area } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { MobileTasksDrawer } from './MobileTasksDrawer';
 
 interface Props {
   inbox: InboxItem[];
+  tasks: Task[];
+  projects: Project[];
+  areas: Area[];
   onAdd: (item: Omit<InboxItem, 'id' | 'createdAt'>) => Promise<InboxItem | null> | void;
   onRemove: (id: string) => void;
   onEnrichUrl?: (inboxId: string, url: string) => void;
 }
 
-export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: Props) {
+export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl }: Props) {
   const { user, signOut: authSignOut } = useAuth();
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -408,7 +412,7 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
       </div>
 
       {/* Note list */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-20 space-y-2">
         {inbox.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 opacity-60">
             <Brain className="w-16 h-16" />
@@ -454,6 +458,8 @@ export function MobileNoteCaptureView({ inbox, onAdd, onRemove, onEnrichUrl }: P
           </AnimatePresence>
         )}
       </div>
+
+      <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} />
     </div>
   );
 }

@@ -114,6 +114,9 @@ const Index = () => {
     return (
       <MobileNoteCaptureView
         inbox={store.inbox}
+        tasks={store.tasks}
+        projects={store.projects}
+        areas={store.areas}
         onAdd={store.addInboxItem}
         onRemove={store.removeInboxItem}
         onEnrichUrl={store.enrichUrlInboxItem}
