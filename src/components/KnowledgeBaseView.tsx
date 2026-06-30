@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import type { Area, Project, WikiPage } from '@/types';
-import { auth } from '@/integrations/firebase/config';
+import { auth, getAppCheckHeader } from '@/integrations/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -100,11 +100,13 @@ export function KnowledgeBaseView({ wikiPages, areas, projects }: Props) {
       }
 
       const token = await user.getIdToken();
+      const appCheckToken = await getAppCheckHeader();
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          ...(appCheckToken ? { 'X-Firebase-AppCheck': appCheckToken } : {}),
         },
         body: JSON.stringify({
           messages: newMessages,

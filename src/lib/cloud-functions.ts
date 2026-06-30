@@ -1,16 +1,19 @@
 import { User } from 'firebase/auth';
+import { getAppCheckHeader } from '@/integrations/firebase/config';
 
-const API_BASE = import.meta.env.VITE_APP_BASE_URL || 'http://localhost:8082';
+export const API_BASE = import.meta.env.VITE_APP_BASE_URL || 'http://localhost:8082';
 
 async function callFunction(endpoint: string, body: any, user: User | null) {
   if (!user) throw new Error('Not authenticated');
 
   const token = await user.getIdToken();
+  const appCheckToken = await getAppCheckHeader();
   const response = await fetch(`${API_BASE}/api${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      ...(appCheckToken ? { 'X-Firebase-AppCheck': appCheckToken } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -53,11 +56,13 @@ export const cloudFunctions = {
     if (!user) throw new Error('Not authenticated');
 
     const token = await user.getIdToken();
+    const appCheckToken = await getAppCheckHeader();
     const response = await fetch(`${API_BASE}/api/ai-assistant`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        ...(appCheckToken ? { 'X-Firebase-AppCheck': appCheckToken } : {}),
       },
       body: JSON.stringify(params),
     });

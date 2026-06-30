@@ -7,6 +7,27 @@ import express from 'express';
 admin.initializeApp();
 const db = admin.firestore();
 const auth = admin.auth();
+const appCheck = admin.appCheck();
+
+// App Check verification — MONITOR MODE: logs missing/invalid tokens but does
+// not block requests yet. Flip APP_CHECK_ENFORCE to true once the frontend is
+// confirmed to be sending valid 'X-Firebase-AppCheck' headers in production.
+const APP_CHECK_ENFORCE = false;
+
+async function checkAppCheckToken(req: express.Request): Promise<void> {
+  const token = req.header('X-Firebase-AppCheck');
+  if (!token) {
+    console.warn(`[AppCheck] Missing token for ${req.path}`);
+    if (APP_CHECK_ENFORCE) throw new Error('Missing App Check token');
+    return;
+  }
+  try {
+    await appCheck.verifyToken(token);
+  } catch (e: any) {
+    console.warn(`[AppCheck] Invalid token for ${req.path}: ${e.message}`);
+    if (APP_CHECK_ENFORCE) throw new Error('Invalid App Check token');
+  }
+}
 
 // ============================================================================
 // EXPRESS APP — single function serving all /api/* routes with CORS
@@ -193,6 +214,7 @@ router.post('/ai-assistant', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { messages } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -246,6 +268,7 @@ router.post('/wiki-chat', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { messages } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -289,6 +312,7 @@ router.post('/wiki-generate', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { title, entityType, entityId } = req.body;
 
     if (!title) {
@@ -335,6 +359,7 @@ router.post('/wiki-edit', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { pageId, instruction } = req.body;
 
     if (!pageId || !instruction) {
@@ -382,6 +407,7 @@ router.post('/classify-inbox', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { content, projects: clientProjects = [], areas: clientAreas = [] } = req.body;
 
     if (!content) {
@@ -584,6 +610,7 @@ router.post('/enrich-url', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { url } = req.body;
 
     if (!url) {
@@ -700,6 +727,7 @@ router.post('/scrape-and-summarize', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { url } = req.body;
 
     if (!url) {
@@ -797,6 +825,7 @@ router.post('/analyze-attachment', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { fileUrl, mimeType, currentName, currentDescription } = req.body;
 
     if (!fileUrl) {
@@ -926,6 +955,7 @@ router.post('/wiki-suggest-structure', async (req, res) => {
   try {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
+    await checkAppCheckToken(req);
     const { pages, entityName, entityType } = req.body;
 
     if (!Array.isArray(pages)) {

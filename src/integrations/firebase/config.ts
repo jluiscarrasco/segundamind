@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +19,26 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+const appCheck = recaptchaSiteKey
+  ? initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  : null;
+
+// Returns a fresh App Check token to attach to outgoing API calls, or null
+// if App Check isn't configured (e.g. local dev without the site key).
+export async function getAppCheckHeader(): Promise<string | null> {
+  if (!appCheck) return null;
+  try {
+    const { token } = await getAppCheckToken(appCheck);
+    return token;
+  } catch {
+    return null;
+  }
+}
 
 // TODO: Enable emulator if needed for local testing
 // if (import.meta.env.DEV) {

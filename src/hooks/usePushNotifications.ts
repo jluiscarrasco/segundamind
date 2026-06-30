@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { auth } from "@/integrations/firebase/config";
+import { API_BASE } from "@/lib/cloud-functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,7 +19,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 async function callPushSubscribeFunction(token: string, body: any) {
-  const response = await fetch('/api/push-subscribe', {
+  const response = await fetch(`${API_BASE}/api/push-subscribe`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

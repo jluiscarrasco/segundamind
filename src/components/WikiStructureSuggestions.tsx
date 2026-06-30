@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sparkles, ArrowRight, Layers, ArrowUpDown, Check, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { WikiPage } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { cloudFunctions } from '@/lib/cloud-functions';
 import { toast } from 'sonner';
 
 interface Suggestion {
@@ -47,18 +48,10 @@ export default function WikiStructureSuggestions({
         contentPreview: p.content.slice(0, 200),
       }));
 
-      const token = await user.getIdToken();
-      const response = await fetch('/api/wiki-suggest-structure', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ pages: pagesInput, entityName, entityType }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Error');
+      const data = await cloudFunctions.wikiSuggestStructure(
+        { pages: pagesInput, entityName, entityType },
+        user
+      );
 
       setSuggestions(data.suggestions || []);
       setFetched(true);
