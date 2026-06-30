@@ -256,7 +256,9 @@ Write in markdown format. Include:
 - Clear title
 - Overview section
 - Key points (if applicable)
-- References or related topics`;
+- References or related topics
+
+IMPORTANT: Write the entire page in the SAME LANGUAGE as the title above (if the title is in Spanish, write in Spanish).`;
 
     const content = await callAI(prompt);
 
@@ -308,7 +310,8 @@ ${currentContent}
 
 Instruction: ${instruction}
 
-Return the updated content in markdown format.`;
+Return the updated content in markdown format.
+IMPORTANT: Write in the SAME LANGUAGE as the current content above (if it is in Spanish, answer in Spanish).`;
 
     const updatedContent = await callAI(prompt);
 
@@ -775,6 +778,9 @@ Please analyze this image and provide:
 5. Any URLs or links mentioned in the image (urls array)
 6. If this seems time-sensitive, suggest a review date (suggestedReviewDate in YYYY-MM-DD format, or null)
 
+IMPORTANT: Write "suggestedName", "suggestedDescription", "additionalNotes" and "summary" in
+the SAME LANGUAGE as the user context above (if it is in Spanish, answer in Spanish; default to Spanish if no context is given).
+
 Respond with JSON: {
   "suggestedName": "...",
   "suggestedDescription": "...",
@@ -826,6 +832,9 @@ Respond with JSON: {
 File type: ${mimeType}
 Content: ${fileContent}
 User context: ${currentName} ${currentDescription}
+
+IMPORTANT: Write "suggestedName", "suggestedDescription", "additionalNotes" and "summary" in
+the SAME LANGUAGE as the file content/user context above (if it is in Spanish, answer in Spanish; default to Spanish if no language is detectable).
 
 Respond with JSON: {
   "suggestedName": "...",
@@ -883,6 +892,8 @@ Pages:
 ${pagesText}
 
 Suggest 2-3 structural improvements (moves, reorders, or groupings) that would make navigation better.
+
+IMPORTANT: Write "reason" and "suggestedTitle" in the SAME LANGUAGE as the page titles above (if they are in Spanish, answer in Spanish).
 
 Respond with JSON: {
   "suggestions": [
