@@ -51,7 +51,7 @@ app.use((req, res, next) => {
   }
   res.set('Vary', 'Origin');
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Firebase-AppCheck');
   if (req.method === 'OPTIONS') {
     res.status(204).send('');
     return;
