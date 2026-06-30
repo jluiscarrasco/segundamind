@@ -14,6 +14,7 @@ const auth = admin.auth();
 
 const ALLOWED_ORIGINS = [
   'https://segundamind.vercel.app',
+  'https://brain.joseluiscarrasco.com',
   'http://localhost:8080',
   'http://localhost:5173',
 ];
