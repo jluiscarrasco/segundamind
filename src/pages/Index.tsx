@@ -14,6 +14,7 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import { DashboardStats } from '@/components/DashboardStats';
 import { AreaHealthCards } from '@/components/AreaHealthCards';
 import { RecentActivity } from '@/components/RecentActivity';
+import { UndatedTasks } from '@/components/UndatedTasks';
 import { InboxPanel } from '@/components/InboxPanel';
 import { DetailPanel } from '@/components/DetailPanel';
 import { EntitySidebar, type EntityFormData } from '@/components/EntitySidebar';
@@ -393,14 +394,23 @@ const Index = () => {
                   <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
 
-                {/* Recent activity */}
-                <RecentActivity
-                  tasks={filteredTasks}
-                  resources={store.resources}
-                  projects={filteredProjects}
-                  wikiPages={store.wikiPages}
-                  onEditEntity={handleEditEntity}
-                />
+                {/* Recent activity + Undated tasks */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <RecentActivity
+                    tasks={filteredTasks}
+                    resources={store.resources}
+                    projects={filteredProjects}
+                    wikiPages={store.wikiPages}
+                    onEditEntity={handleEditEntity}
+                  />
+                  <UndatedTasks
+                    tasks={filteredTasks}
+                    projects={filteredProjects}
+                    areas={filteredAreas}
+                    onEditEntity={handleEditEntity}
+                    onSetTaskDate={(id, date) => store.updateTask(id, { reviewDate: date })}
+                  />
+                </div>
               </>
             )}
           </div>
