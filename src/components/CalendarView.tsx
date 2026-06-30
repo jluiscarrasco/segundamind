@@ -299,9 +299,11 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
                           onDragStart={(e) => handleDragStart(e, item)}
                           onClick={() => onEditEntity(item.type, item.id)}
                           className={`flex items-center gap-1 pl-1.5 pr-1 py-[3px] rounded-[3px] cursor-grab active:cursor-grabbing transition-colors border-l-2 ${importanceColor[item.importance]} ${
-                            isOverdue && item.status !== 'finished'
-                              ? 'bg-destructive/8 hover:bg-destructive/12 text-foreground'
-                              : 'bg-secondary/40 hover:bg-secondary/70 text-foreground'
+                            item.status === 'finished'
+                              ? 'bg-green-100 hover:bg-green-200 text-foreground'
+                              : isOverdue
+                                ? 'bg-destructive/8 hover:bg-destructive/12 text-foreground'
+                                : 'bg-secondary/40 hover:bg-secondary/70 text-foreground'
                           }`}
                         >
                           {item.displayId && (
