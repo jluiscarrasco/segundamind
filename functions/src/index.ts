@@ -9,10 +9,10 @@ const db = admin.firestore();
 const auth = admin.auth();
 const appCheck = admin.appCheck();
 
-// App Check verification — MONITOR MODE: logs missing/invalid tokens but does
-// not block requests yet. Flip APP_CHECK_ENFORCE to true once the frontend is
-// confirmed to be sending valid 'X-Firebase-AppCheck' headers in production.
-const APP_CHECK_ENFORCE = false;
+// App Check verification — ENFORCED. Confirmed in production (2026-06-30):
+// preflight requests the header, the real POST succeeds, and the client
+// console shows no token errors.
+const APP_CHECK_ENFORCE = true;
 
 async function checkAppCheckToken(req: express.Request): Promise<void> {
   const token = req.header('X-Firebase-AppCheck');
