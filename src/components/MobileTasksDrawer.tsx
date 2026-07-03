@@ -220,7 +220,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
         }}
         className="text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors shrink-0"
       >
-        +1
+        +1d
       </button>
     </div>
   );
