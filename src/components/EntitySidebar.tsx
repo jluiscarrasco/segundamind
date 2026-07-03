@@ -89,8 +89,10 @@ Responde SOLO con un JSON array con nombre de cada paso:
       // Use streaming API and collect all chunks
       let fullContent = '';
       for await (const chunk of cloudFunctions.aiAssistantStream({ messages: [{ role: 'user', content: prompt }] }, user)) {
-        fullContent += chunk.content || '';
+        console.log('Chunk received:', chunk);
+        fullContent += chunk.content || chunk || '';
       }
+      console.log('Full content accumulated:', fullContent);
 
       let subtasksData;
       try {
