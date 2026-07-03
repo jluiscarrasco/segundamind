@@ -86,14 +86,17 @@ Analiza la tarea y descomponla en todos los pasos necesarios y realistas para co
 Responde SOLO con un JSON array con nombre de cada paso:
 [{"name": "Paso 1: descripción breve"}, {"name": "Paso 2: descripción breve"}, ...]`;
 
-      const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
+      // Use streaming API and collect all chunks
+      let fullContent = '';
+      for await (const chunk of cloudFunctions.aiAssistantStream({ messages: [{ role: 'user', content: prompt }] }, user)) {
+        fullContent += chunk.content || '';
+      }
 
       let subtasksData;
       try {
-        const content = (result.content || '').trim();
+        const content = fullContent.trim();
 
         if (!content) {
-          console.error('Empty content in response:', result);
           throw new Error('Empty response');
         }
 
@@ -107,7 +110,7 @@ Responde SOLO con un JSON array con nombre de cada paso:
         }
 
         if (!jsonStr) {
-          console.error('No JSON found in content:', content);
+          console.error('No JSON found in response:', content);
           throw new Error('No JSON array found in response');
         }
 
