@@ -49,6 +49,12 @@ export interface Project {
   taskCounter: number; // auto-increment counter for task IDs
 }
 
+export interface Subtask {
+  id: string;
+  name: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   userId: string;
@@ -60,6 +66,7 @@ export interface Task {
   importance: Importance;
   effort: Effort;
   reviewDate: string | null;
+  subtasks?: Subtask[];
   createdAt: string;
 }
 
