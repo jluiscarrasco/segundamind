@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
-import { STATUS_LABELS } from '@/types';
-import { ImportanceDot, StatusIcon } from './StatusBadges';
+import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
 
@@ -151,11 +150,8 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         <span className="text-xs font-medium text-foreground truncate flex-1">{item.name}</span>
         <span className="text-[11px] text-muted-foreground truncate max-w-[100px] hidden sm:block">{item.parentInfo}</span>
         {item.status !== 'active' && item.status !== 'ready' && (
-          <span
-            title={STATUS_LABELS[item.status]}
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0 uppercase"
-          >
-            {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : item.status === 'finished' ? '✓' : '?'}
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+            {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : '?'}
           </span>
         )}
         <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : isToday ? 'text-primary' : 'text-muted-foreground'}`}>
