@@ -130,7 +130,7 @@ const Index = () => {
     if (modal.type === 'task') {
       const task = store.tasks.find(t => t.id === modal.id);
       if (!task) return undefined;
-      return { name: task.name, description: task.description, importance: task.importance, status: task.status, reviewDate: task.reviewDate, effort: task.effort };
+      return { name: task.name, description: task.description, importance: task.importance, status: task.status, reviewDate: task.reviewDate, effort: task.effort, subtasks: task.subtasks ?? [] };
     }
     let entity: { name: string; description: string; importance: any; status: any; reviewDate: string | null } | undefined;
     if (modal.type === 'area') entity = store.areas.find(a => a.id === modal.id);

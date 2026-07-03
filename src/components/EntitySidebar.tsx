@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download } from 'lucide-react';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download, Sparkles } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrive } from '@/hooks/useDrive';
+import { cloudFunctions } from '@/lib/cloud-functions';
 import { toast } from 'sonner';
 
 export interface EntityFormData {
@@ -42,6 +43,7 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [reviewDate, setReviewDate] = useState(initialData?.reviewDate || '');
   const [effort, setEffort] = useState<Effort>(initialData?.effort ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialData?.subtasks ?? []);
+  const [generatingAI, setGeneratingAI] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -63,6 +65,67 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     onAddResource({ entityType: type, entityId, type: 'note', content: newNote.trim() });
     setNewNote('');
     setShowNoteInput(false);
+  };
+
+  const generateSubtasksWithAI = async () => {
+    if (!user || type !== 'task') return;
+    if (!name.trim()) {
+      toast.error('Escribe primero el nombre de la tarea');
+      return;
+    }
+
+    setGeneratingAI(true);
+    try {
+      const prompt = `Soy un usuario con TDAH y necesito descomponer una tarea compleja en pasos ejecutables para evitar procrastinación.
+
+Tarea: "${name}"
+${description ? `Descripción: ${description}` : ''}
+
+Analiza la tarea y descomponla en todos los pasos necesarios y realistas para completarla. No hay límite de pasos: usa los que hagan falta.
+- Algunos pasos pueden ser cortos (15-30 minutos) y otros largos (horas o días)
+- Incluye pasos de preparación, aprendizaje, práctica o evaluación si aplican
+- Cada paso debe ser accionable, específico y empezar con un verbo
+- Ordénalos en la secuencia en que deben ejecutarse
+
+Responde SOLO con un JSON array, sin texto adicional:
+[{"name": "Paso 1..."}, {"name": "Paso 2..."}]`;
+
+      let fullContent = '';
+      for await (const chunk of cloudFunctions.aiAssistantStream({ messages: [{ role: 'user', content: prompt }] }, user)) {
+        if (chunk?.error) {
+          throw new Error(chunk.error);
+        }
+        fullContent += chunk?.content || '';
+      }
+
+      const jsonMatch = fullContent.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.error('AI response without JSON array:', fullContent);
+        throw new Error('La IA no devolvió una lista válida');
+      }
+
+      const subtasksData = JSON.parse(jsonMatch[0]);
+      if (!Array.isArray(subtasksData) || subtasksData.length === 0) {
+        throw new Error('La IA no devolvió pasos');
+      }
+
+      const generated: Subtask[] = subtasksData
+        .filter((item: any) => item?.name)
+        .map((item: any) => ({
+          id: crypto.randomUUID(),
+          name: String(item.name),
+          completed: false,
+        }));
+
+      // Conservar las subtareas existentes y añadir las generadas
+      setSubtasks(prev => [...prev, ...generated]);
+      toast.success(`${generated.length} pasos generados`);
+    } catch (error: any) {
+      console.error('Error generating subtasks:', error);
+      toast.error(error?.message || 'Error al generar subtareas');
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
 const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
@@ -119,7 +182,7 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
       importance,
       status,
       reviewDate: reviewDate || null,
-      ...(type === 'task' ? { effort, subtasks: subtasks.length > 0 ? subtasks : undefined } : {})
+      ...(type === 'task' ? { effort, subtasks } : {})
     });
   };
 
@@ -258,13 +321,28 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Subtareas</label>
-                <button
+                <div className="flex items-center gap-2">
+                  <button
                     type="button"
-                    onClick={() => setSubtasks([...subtasks, { id: Math.random().toString(36), name: '', completed: false }])}
+                    onClick={() => setSubtasks([...subtasks, { id: crypto.randomUUID(), name: '', completed: false }])}
                     className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
                   >
-                    <Plus className="w-3 h-3" /> Añadir subtarea
+                    <Plus className="w-3 h-3" /> Añadir
                   </button>
+                  <button
+                    type="button"
+                    onClick={generateSubtasksWithAI}
+                    disabled={generatingAI}
+                    title="Dividir la tarea en pasos con IA (anti-procrastinación)"
+                    className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 disabled:opacity-50"
+                  >
+                    {generatingAI ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Generando...</>
+                    ) : (
+                      <><Sparkles className="w-3 h-3" /> Dividir con IA</>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {subtasks.length > 0 ? (

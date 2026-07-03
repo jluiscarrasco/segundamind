@@ -236,6 +236,8 @@ export function useStore() {
     delete dbPatch.createdAt;
     delete dbPatch.taskNumber;
     delete dbPatch.projectId;
+    // Firestore rejects undefined values in updateDoc
+    Object.keys(dbPatch).forEach(k => dbPatch[k] === undefined && delete dbPatch[k]);
     await updateDoc(doc(db, 'tasks', id), dbPatch);
     setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, ...patch } : t) }));
   }, []);
