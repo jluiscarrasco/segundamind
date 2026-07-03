@@ -86,46 +86,16 @@ Analiza la tarea y descomponla en todos los pasos necesarios y realistas para co
 Responde SOLO con un JSON array con nombre de cada paso:
 [{"name": "Paso 1: descripción breve"}, {"name": "Paso 2: descripción breve"}, ...]`;
 
-      const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8082/api/ai-assistant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
-      });
-
-      if (!response.ok) throw new Error('API error');
-
-      const text = await response.text();
-      let result: any = {};
-
-      try {
-        // Handle streaming format: "data: {...}\ndata: {...}"
-        if (text.includes('data: ')) {
-          const lines = text.split('\n').filter(l => l.trim());
-          const lastLine = lines[lines.length - 1];
-          if (lastLine.startsWith('data: ')) {
-            const jsonStr = lastLine.slice(6).trim();
-            result = JSON.parse(jsonStr);
-          }
-        } else {
-          // Direct JSON response
-          result = JSON.parse(text);
-        }
-      } catch (e) {
-        console.error('Error parsing response:', e, 'Raw text:', text);
-        toast.error('Error en la respuesta de la API');
-        return;
-      }
+      const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
 
       let subtasksData;
       try {
-        console.log('Full result object:', result);
-        const content = (result.content || result.message || result.assistant || JSON.stringify(result)).trim();
+        const content = (result.content || '').trim();
 
-        if (!content || content === '{}') throw new Error('Empty response');
+        if (!content) {
+          console.error('Empty content in response:', result);
+          throw new Error('Empty response');
+        }
 
         // Try to extract JSON array from content
         let jsonStr = '';
@@ -137,13 +107,13 @@ Responde SOLO con un JSON array con nombre de cada paso:
         }
 
         if (!jsonStr) {
+          console.error('No JSON found in content:', content);
           throw new Error('No JSON array found in response');
         }
 
         subtasksData = JSON.parse(jsonStr);
       } catch (e) {
         console.error('Error parsing subtasks:', e);
-        console.error('Full result:', JSON.stringify(result, null, 2));
         toast.error('No se pudo procesar la respuesta de IA');
         return;
       }
