@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download, Sparkles } from 'lucide-react';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrive } from '@/hooks/useDrive';
-import { cloudFunctions } from '@/lib/cloud-functions';
 import { toast } from 'sonner';
 
 export interface EntityFormData {
@@ -43,7 +42,6 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [reviewDate, setReviewDate] = useState(initialData?.reviewDate || '');
   const [effort, setEffort] = useState<Effort>(initialData?.effort ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialData?.subtasks ?? []);
-  const [generatingAI, setGeneratingAI] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -67,80 +65,7 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     setShowNoteInput(false);
   };
 
-  const generateSubtasksWithAI = async () => {
-    if (!user || type !== 'task') return;
-
-    setGeneratingAI(true);
-    try {
-      const prompt = `Soy un usuario con TDAH y necesito descomponer una tarea compleja en pasos ejecutables para evitar procrastinación.
-
-Tarea: "${name}"
-${description ? `Descripción: ${description}` : ''}
-
-Analiza la tarea y descomponla en todos los pasos necesarios y realistas para completarla. No hay límite de pasos.
-- Algunos pasos pueden ser cortos (15-30 minutos)
-- Otros pueden ser largos (varias horas, incluso días)
-- Incluye pasos de preparación, aprendizaje, práctica, evaluación si aplica
-- Cada paso debe ser accionable y específico
-
-Responde SOLO con un JSON array con nombre de cada paso:
-[{"name": "Paso 1: descripción breve"}, {"name": "Paso 2: descripción breve"}, ...]`;
-
-      // Use streaming API and collect all chunks
-      let fullContent = '';
-      for await (const chunk of cloudFunctions.aiAssistantStream({ messages: [{ role: 'user', content: prompt }] }, user)) {
-        console.log('Chunk received:', chunk);
-        fullContent += chunk.content || chunk || '';
-      }
-      console.log('Full content accumulated:', fullContent);
-
-      let subtasksData;
-      try {
-        const content = fullContent.trim();
-
-        if (!content) {
-          throw new Error('Empty response');
-        }
-
-        // Try to extract JSON array from content
-        let jsonStr = '';
-        if (content.startsWith('[')) {
-          jsonStr = content;
-        } else {
-          const jsonMatch = content.match(/\[[\s\S]*\]/);
-          jsonStr = jsonMatch ? jsonMatch[0] : '';
-        }
-
-        if (!jsonStr) {
-          console.error('No JSON found in response:', content);
-          throw new Error('No JSON array found in response');
-        }
-
-        subtasksData = JSON.parse(jsonStr);
-      } catch (e) {
-        console.error('Error parsing subtasks:', e);
-        toast.error('No se pudo procesar la respuesta de IA');
-        return;
-      }
-
-      if (Array.isArray(subtasksData) && subtasksData.length > 0) {
-        const newSubtasksList = subtasksData.map((item: any) => ({
-          id: Math.random().toString(36),
-          name: item.name || '',
-          completed: false,
-        }));
-        setSubtasks(newSubtasksList);
-        toast.success(`${newSubtasksList.length} subtareas generadas`);
-      }
-    } catch (error) {
-      console.error('Error generating subtasks:', error);
-      toast.error('Error al generar subtareas');
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
-
-  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const attachFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,23 +258,13 @@ Responde SOLO con un JSON array con nombre de cada paso:
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-muted-foreground">Subtareas</label>
-                <div className="flex gap-1">
-                  <button
+                <button
                     type="button"
                     onClick={() => setSubtasks([...subtasks, { id: Math.random().toString(36), name: '', completed: false }])}
                     className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
                   >
-                    <Plus className="w-3 h-3" /> Añadir
+                    <Plus className="w-3 h-3" /> Añadir subtarea
                   </button>
-                  <button
-                    type="button"
-                    onClick={generateSubtasksWithAI}
-                    disabled={generatingAI}
-                    className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 disabled:opacity-50"
-                  >
-                    <Sparkles className="w-3 h-3" /> {generatingAI ? 'Generando...' : 'IA'}
-                  </button>
-                </div>
               </div>
 
               {subtasks.length > 0 ? (
