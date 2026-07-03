@@ -76,18 +76,18 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
 
     setGeneratingAI(true);
     try {
-      const prompt = `Soy un usuario con TDAH. Descompón esta tarea en una SECUENCIA de acciones concretas que, ejecutadas en orden, la completan de principio a fin. El objetivo es vencer la procrastinación: cada acción debe ser tan clara que pueda empezarla sin pensar.
+      const prompt = `Soy un usuario con TDAH. Descompón esta tarea en una SECUENCIA de pasos que, ejecutados en orden, la completan de principio a fin. El objetivo es vencer la procrastinación: cada paso debe ser tan claro que pueda empezarlo sin pensar.
 
 Tarea: "${name}"
 ${description ? `Descripción: ${description}` : ''}
 
 Reglas:
-- Acciones, NO recomendaciones ni consejos. Mal: "Informarse sobre requisitos". Bien: "Buscar en la web de la DGT los requisitos del A2"
-- Cada acción empieza con un verbo en infinitivo y es autocontenida: al leerla sé exactamente qué hacer
-- La primera acción debe ser muy pequeña y fácil (romper la barrera de empezar)
-- Orden estrictamente secuencial: completar una desbloquea la siguiente
-- Nombre corto y escaneable: máximo 8 palabras. Sin numerar (el orden ya lo da la lista)
-- Usa las acciones que hagan falta, sin límite
+- Cada paso es una unidad de trabajo con entidad propia: ocupa un rato y produce un resultado visible. NUNCA gestos triviales que un adulto hace sin pensar. Mal: "Abrir la puerta", "Coger el teléfono", "Ponerse los guantes". Bien: "Desbrozar la maleza de la zona norte", "Cargar los restos en el remolque"
+- Acciones concretas, NO recomendaciones ni consejos. Mal: "Informarse sobre requisitos". Bien: "Buscar en la web de la DGT los requisitos del A2"
+- Cada paso empieza con un verbo en infinitivo y es autocontenido: al leerlo sé exactamente qué hacer
+- Orden estrictamente secuencial: completar uno desbloquea el siguiente
+- Nombre corto y escaneable: máximo 8 palabras, íntegramente en español. Sin numerar (el orden ya lo da la lista)
+- Usa los pasos que la tarea necesite de verdad: una tarea simple pueden ser 3-4, un proyecto largo puede ser 15. No rellenes
 
 Responde SOLO con un JSON array, sin texto adicional:
 [{"name": "..."}, {"name": "..."}]`;
