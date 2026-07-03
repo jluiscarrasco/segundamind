@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, ListChecks } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
+import { STATUS_LABELS } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET } from '@/lib/dateUtils';
 
@@ -17,6 +18,7 @@ interface DrawerItem {
   importance: Task['importance'];
   reviewDate: string;
   parentInfo: string;
+  status: Task['status'];
 }
 
 export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerProps) {
@@ -33,6 +35,7 @@ export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerP
         importance: t.importance,
         reviewDate: t.reviewDate!,
         parentInfo: [area?.name, project?.name].filter(Boolean).join(' › '),
+        status: t.status,
       };
     };
 
@@ -56,12 +59,25 @@ export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerP
   };
 
   const renderRow = (item: DrawerItem, dateLabel: string, isOverdue: boolean) => (
-    <div key={item.id} className="flex items-center gap-2.5 px-4 py-2.5 border-b border-border/60 last:border-0">
+    <div
+      key={item.id}
+      className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-border/60 last:border-0 ${
+        item.status === 'blocked' ? 'bg-muted/20 opacity-60' : item.status === 'funnel' ? 'bg-secondary/20 opacity-75' : ''
+      }`}
+    >
       <ImportanceDot importance={item.importance} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-foreground truncate">{item.name}</p>
         {item.parentInfo && <p className="text-[11px] text-muted-foreground truncate">{item.parentInfo}</p>}
       </div>
+      {item.status !== 'active' && item.status !== 'ready' && (
+        <span
+          title={STATUS_LABELS[item.status]}
+          className="text-[10px] font-bold px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0"
+        >
+          {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : '?'}
+        </span>
+      )}
       <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-primary'}`}>
         {dateLabel}
       </span>

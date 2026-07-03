@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
-import { ImportanceDot } from './StatusBadges';
+import { STATUS_LABELS } from '@/types';
+import { ImportanceDot, StatusIcon } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
 
@@ -17,6 +18,7 @@ interface AgendaItem {
   parentInfo: string;
   score?: number;
   isOverdue: boolean;
+  status: Task['status'];
 }
 
 interface TuAgendaProps {
@@ -35,9 +37,9 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
   const { overdue, today, upcoming } = useMemo(() => {
     const all: AgendaItem[] = [];
 
-    // Agregar tareas activas/ready con reviewDate
+    // Agregar todas las tareas (excepto finished) con reviewDate
     tasks.forEach(t => {
-      if ((t.status === 'active' || t.status === 'ready') && t.reviewDate) {
+      if (t.status !== 'finished' && t.reviewDate) {
         const project = projects.find(p => p.id === t.projectId);
         const area = project ? areas.find(a => a.id === project.areaId) : null;
         const score = scoreTaskDetailed(t, projects, areas);
@@ -50,6 +52,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           parentInfo: `${area?.name || ''} › ${project?.name || ''}`,
           score: score.total,
           isOverdue: t.reviewDate < todayKey,
+          status: t.status,
         });
       }
     });
@@ -65,6 +68,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           reviewDate: a.reviewDate,
           parentInfo: 'Área',
           isOverdue: a.reviewDate < todayKey,
+          status: a.status,
         });
       }
     });
@@ -81,6 +85,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           reviewDate: p.reviewDate,
           parentInfo: area?.name || '',
           isOverdue: p.reviewDate < todayKey,
+          status: p.status,
         });
       }
     });
@@ -117,6 +122,15 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
     return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
+  const getRowBgColor = (item: AgendaItem, section: 'overdue' | 'today' | 'upcoming') => {
+    if (item.status === 'blocked') return 'bg-muted/20 hover:bg-muted/30 opacity-60';
+    if (item.status === 'funnel') return 'bg-secondary/20 hover:bg-secondary/30 opacity-75';
+
+    const isOverdue = section === 'overdue';
+    const isToday = section === 'today';
+    return isOverdue ? 'bg-destructive/5 hover:bg-destructive/10' : isToday ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-secondary/50';
+  };
+
   const renderItem = (item: AgendaItem, i: number, section: 'overdue' | 'today' | 'upcoming') => {
     const isOverdue = section === 'overdue';
     const isToday = section === 'today';
@@ -128,9 +142,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.02 }}
         onClick={() => onEditEntity(item.type, item.id)}
-        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors group ${
-          isOverdue ? 'bg-destructive/5 hover:bg-destructive/10' : isToday ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-secondary/50'
-        }`}
+        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors group ${getRowBgColor(item, section)}`}
       >
         <ImportanceDot importance={item.importance} size="sm" />
         <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground shrink-0">
@@ -138,6 +150,14 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         </span>
         <span className="text-xs font-medium text-foreground truncate flex-1">{item.name}</span>
         <span className="text-[11px] text-muted-foreground truncate max-w-[100px] hidden sm:block">{item.parentInfo}</span>
+        {item.status !== 'active' && item.status !== 'ready' && (
+          <span
+            title={STATUS_LABELS[item.status]}
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0 uppercase"
+          >
+            {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : item.status === 'finished' ? '✓' : '?'}
+          </span>
+        )}
         <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : isToday ? 'text-primary' : 'text-muted-foreground'}`}>
           {formatDate(item.reviewDate)}
         </span>

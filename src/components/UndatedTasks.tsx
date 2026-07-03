@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarOff } from 'lucide-react';
 import type { Task, Project, Area, EntityType } from '@/types';
-import { getTaskDisplayId } from '@/types';
+import { getTaskDisplayId, STATUS_LABELS } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
@@ -52,20 +52,30 @@ export function UndatedTasks({ tasks, projects, areas, onEditEntity, onSetTaskDa
             Todas las tareas tienen fecha 🎉
           </div>
         ) : (
-          items.map((item, i) => (
+          items.map((item, i) => {
+            const rowBg = item.task.status === 'blocked' ? 'hover:bg-muted/20 opacity-60' : item.task.status === 'funnel' ? 'hover:bg-secondary/20 opacity-75' : 'hover:bg-secondary/30';
+            return (
             <motion.div
               key={item.task.id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.02 }}
               onClick={() => onEditEntity('task', item.task.id)}
-              className="px-5 py-2.5 flex items-center gap-2.5 cursor-pointer hover:bg-secondary/30 transition-colors group"
+              className={`px-5 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors group ${rowBg}`}
             >
               <ImportanceDot importance={item.task.importance} size="sm" />
               <span className="font-mono text-[10px] font-semibold text-muted-foreground shrink-0">
                 {item.displayId}
               </span>
               <span className="text-xs font-medium text-foreground truncate flex-1">{item.task.name}</span>
+              {item.task.status !== 'active' && item.task.status !== 'ready' && (
+                <span
+                  title={STATUS_LABELS[item.task.status]}
+                  className="text-[10px] font-bold px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0 uppercase"
+                >
+                  {item.task.status === 'blocked' ? '🔒' : item.task.status === 'funnel' ? '⏳' : '?'}
+                </span>
+              )}
               <span className="text-[11px] text-muted-foreground truncate max-w-[120px] hidden sm:block">
                 {item.parentInfo}
               </span>
@@ -90,7 +100,8 @@ export function UndatedTasks({ tasks, projects, areas, onEditEntity, onSetTaskDa
                 </button>
               </div>
             </motion.div>
-          ))
+          );
+          })
         )}
       </div>
     </div>
