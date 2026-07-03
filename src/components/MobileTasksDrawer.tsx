@@ -60,10 +60,11 @@ Responde SOLO con un JSON array: [{"name": "Subtarea 1"}, {"name": "Subtarea 2"}
       let subtasksData;
       try {
         // Intentar extraer JSON del contenido
-        const content = result.content || result.message || '';
+        const content = result.content || '';
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         subtasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-      } catch {
+      } catch (e) {
+        console.error('Error parsing JSON:', e);
         toast.error('No se pudo procesar la respuesta de IA');
         return;
       }
