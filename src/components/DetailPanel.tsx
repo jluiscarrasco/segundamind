@@ -502,7 +502,12 @@ export function DetailPanel({ area, project, projects, tasks, areas, resources, 
           transition={{ delay: 0.1 }}
           className="w-72 shrink-0 sticky top-20 bg-card rounded-xl border border-border shadow-card p-4 max-h-[calc(100vh-120px)] overflow-y-auto"
         >
-          <ResourcesSidebar entityType="project" entityId={project.id} />
+          {/* Called as a function (not <ResourcesSidebar/>) on purpose: it is
+              defined inside DetailPanel, so rendering it as an element gives it
+              a new component identity every render, remounting its whole subtree
+              (LinkedFilesList → useDrive → 4 Firestore listeners re-subscribed
+              on every render). Inlining keeps LinkedFilesList's position stable. */}
+          {ResourcesSidebar({ entityType: 'project', entityId: project.id })}
         </motion.div>
       </div>
     );
@@ -563,7 +568,7 @@ export function DetailPanel({ area, project, projects, tasks, areas, resources, 
                     <span className="text-sm text-foreground hover:text-primary transition-colors">{p.name}</span>
                     <span className="text-[10px] text-muted-foreground ml-2">{pTasks.length} tareas</span>
                   </div>
-                  <ResourceBadges entityType="project" entityId={p.id} />
+                  {ResourceBadges({ entityType: 'project', entityId: p.id })}
                   <ImportanceBadge importance={p.importance} />
                 </div>
               );
@@ -660,7 +665,7 @@ export function DetailPanel({ area, project, projects, tasks, areas, resources, 
           transition={{ delay: 0.1 }}
           className="w-72 shrink-0 sticky top-20 bg-card rounded-xl border border-border shadow-card p-4 max-h-[calc(100vh-120px)] overflow-y-auto"
         >
-          <ResourcesSidebar entityType="area" entityId={area.id} />
+          {ResourcesSidebar({ entityType: 'area', entityId: area.id })}
         </motion.div>
       </div>
     );

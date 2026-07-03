@@ -46,7 +46,6 @@ export function useStore() {
   const { user } = useAuth();
   const [data, setData] = useState<StoreData>(emptyData());
   const [loading, setLoading] = useState(true);
-  const unsubscribersRef = useCallback(() => new Map<string, Unsubscribe>(), [])();
 
   // Load all data on mount / user change with real-time listeners
   useEffect(() => {
@@ -57,12 +56,15 @@ export function useStore() {
     }
 
     let cancelled = false;
+    // Effect-scoped so the cleanup below can unsubscribe. Deps are [user] only.
+    // Previously this was a `useCallback(() => new Map(), [])()` at component
+    // scope: it built a NEW Map every render, and (being in the dep array) that
+    // re-ran this effect on every render — tearing down and recreating all
+    // listeners, each re-listen billing a full re-read of every collection.
+    const unsubscribers = new Map<string, Unsubscribe>();
 
     async function setupListeners() {
       try {
-        // Setup real-time listeners for all collections
-        const unsubscribers = new Map<string, Unsubscribe>();
-
         unsubscribers.set('areas', onSnapshot(
           query(collection(db, 'areas'), where('userId', '==', user.uid)),
           (snapshot) => {
@@ -118,10 +120,6 @@ export function useStore() {
         ));
 
         setLoading(false);
-
-        // Save unsubscribers for cleanup
-        unsubscribersRef.clear();
-        unsubscribers.forEach((unsub, key) => unsubscribersRef.set(key, unsub));
       } catch (error) {
         console.error('Error setting up listeners:', error);
         setLoading(false);
@@ -132,10 +130,10 @@ export function useStore() {
 
     return () => {
       cancelled = true;
-      unsubscribersRef.forEach(unsub => unsub());
-      unsubscribersRef.clear();
+      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.clear();
     };
-  }, [user, unsubscribersRef]);
+  }, [user]);
 
   // --- Areas ---
   const addArea = useCallback(async (area: Omit<Area, 'id' | 'createdAt'>) => {

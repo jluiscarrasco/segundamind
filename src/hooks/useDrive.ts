@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { db, storage } from '@/integrations/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserFolder, UserFile, UserFileLink, EntityType } from '@/types';
@@ -52,7 +52,6 @@ export function useDrive() {
   const [files, setFiles] = useState<UserFile[]>([]);
   const [links, setLinks] = useState<UserFileLink[]>([]);
   const [loading, setLoading] = useState(true);
-  const unsubscribersRef = useCallback(() => new Map<string, Unsubscribe>(), [])();
 
   // Setup real-time listeners
   useEffect(() => {
@@ -131,61 +130,11 @@ export function useDrive() {
 
     setLoading(false);
 
-    // Save unsubscribers
-    unsubscribersRef.clear();
-    unsubscribers.forEach((unsub, key) => unsubscribersRef.set(key, unsub));
-
     return () => {
-      unsubscribersRef.forEach(unsub => unsub());
-      unsubscribersRef.clear();
+      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.clear();
     };
-  }, [user, unsubscribersRef]);
-
-  // One-time cleanup: remove duplicate EMPTY folders (same name + same parent).
-  // Auto-seeding previously created duplicates on every reload; this self-heals.
-  const cleanedRef = useRef(false);
-  useEffect(() => {
-    if (!user || loading || cleanedRef.current) return;
-    if (folders.length === 0) return;
-
-    // Group folders by parentId|name
-    const groups = new Map<string, UserFolder[]>();
-    folders.forEach(f => {
-      const key = `${f.parentId ?? 'root'}|${f.name}`;
-      const list = groups.get(key) || [];
-      list.push(f);
-      groups.set(key, list);
-    });
-
-    // Find duplicates whose extras are empty (no subfolders, no files)
-    const toDelete: string[] = [];
-    groups.forEach(list => {
-      if (list.length <= 1) return;
-      // Keep the first, evaluate the rest
-      list.slice(1).forEach(dup => {
-        const hasSubfolder = folders.some(f => f.parentId === dup.id);
-        const hasFiles = files.some(f => f.folderId === dup.id);
-        if (!hasSubfolder && !hasFiles) toDelete.push(dup.id);
-      });
-    });
-
-    if (toDelete.length === 0) {
-      cleanedRef.current = true;
-      return;
-    }
-
-    cleanedRef.current = true;
-    (async () => {
-      try {
-        const batch = writeBatch(db);
-        toDelete.forEach(id => batch.delete(doc(db, 'user_folders', id)));
-        await batch.commit();
-        console.log(`🧹 Removed ${toDelete.length} duplicate empty folders`);
-      } catch (e) {
-        console.error('Cleanup failed:', e);
-      }
-    })();
-  }, [user, loading, folders, files]);
+  }, [user]);
 
   // --- Folders ---
   const createFolder = useCallback(async (name: string, parentId: string | null) => {
