@@ -90,11 +90,24 @@ Responde SOLO con un JSON array con nombre de cada paso:
 
       let subtasksData;
       try {
-        const content = result.content || '';
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        subtasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+        const content = (result.content || result.message || '').trim();
+
+        // Try to extract JSON array from content
+        let jsonStr = '';
+        if (content.startsWith('[')) {
+          jsonStr = content;
+        } else {
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          jsonStr = jsonMatch ? jsonMatch[0] : '';
+        }
+
+        if (!jsonStr) {
+          throw new Error('No JSON array found in response');
+        }
+
+        subtasksData = JSON.parse(jsonStr);
       } catch (e) {
-        console.error('Error parsing JSON:', e);
+        console.error('Error parsing subtasks:', e, 'Raw response:', result);
         toast.error('No se pudo procesar la respuesta de IA');
         return;
       }
