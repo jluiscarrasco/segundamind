@@ -97,7 +97,28 @@ Responde SOLO con un JSON array con nombre de cada paso:
       });
 
       if (!response.ok) throw new Error('API error');
-      const result = await response.json();
+
+      const text = await response.text();
+      let result: any = {};
+
+      try {
+        // Handle streaming format: "data: {...}\ndata: {...}"
+        if (text.includes('data: ')) {
+          const lines = text.split('\n').filter(l => l.trim());
+          const lastLine = lines[lines.length - 1];
+          if (lastLine.startsWith('data: ')) {
+            const jsonStr = lastLine.slice(6).trim();
+            result = JSON.parse(jsonStr);
+          }
+        } else {
+          // Direct JSON response
+          result = JSON.parse(text);
+        }
+      } catch (e) {
+        console.error('Error parsing response:', e, 'Raw text:', text);
+        toast.error('Error en la respuesta de la API');
+        return;
+      }
 
       let subtasksData;
       try {
@@ -120,7 +141,7 @@ Responde SOLO con un JSON array con nombre de cada paso:
 
         subtasksData = JSON.parse(jsonStr);
       } catch (e) {
-        console.error('Error parsing subtasks:', e, 'Raw response:', result);
+        console.error('Error parsing subtasks:', e, 'Content:', result.content);
         toast.error('No se pudo procesar la respuesta de IA');
         return;
       }
