@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, createElement, type ReactNode } from 'react';
 import { db } from '@/integrations/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
@@ -42,11 +42,13 @@ function mapWikiPage(doc: any): WikiPage {
   return { id: doc.id, ...doc.data() };
 }
 
-export function useStore() {
+// Internal hook that owns the Firestore listeners. Only StoreProvider calls
+// it: every extra caller would create its own 6 onSnapshot listeners and
+// re-read all collections on each mount, multiplying billed reads.
+function useStoreData() {
   const { user } = useAuth();
   const [data, setData] = useState<StoreData>(emptyData());
   const [loading, setLoading] = useState(true);
-  const unsubscribersRef = useCallback(() => new Map<string, Unsubscribe>(), [])();
 
   // Load all data on mount / user change with real-time listeners
   useEffect(() => {
@@ -57,11 +59,13 @@ export function useStore() {
     }
 
     let cancelled = false;
+    // Effect-scoped: the previous version built a new Map on every render and
+    // used it as an effect dependency, so every render tore down and recreated
+    // all listeners (a billed full re-read of every collection each time).
+    const unsubscribers = new Map<string, Unsubscribe>();
 
     async function setupListeners() {
       try {
-        // Setup real-time listeners for all collections
-        const unsubscribers = new Map<string, Unsubscribe>();
 
         unsubscribers.set('areas', onSnapshot(
           query(collection(db, 'areas'), where('userId', '==', user.uid)),
@@ -118,10 +122,6 @@ export function useStore() {
         ));
 
         setLoading(false);
-
-        // Save unsubscribers for cleanup
-        unsubscribersRef.clear();
-        unsubscribers.forEach((unsub, key) => unsubscribersRef.set(key, unsub));
       } catch (error) {
         console.error('Error setting up listeners:', error);
         setLoading(false);
@@ -132,10 +132,10 @@ export function useStore() {
 
     return () => {
       cancelled = true;
-      unsubscribersRef.forEach(unsub => unsub());
-      unsubscribersRef.clear();
+      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.clear();
     };
-  }, [user, unsubscribersRef]);
+  }, [user]);
 
   // --- Areas ---
   const addArea = useCallback(async (area: Omit<Area, 'id' | 'createdAt'>) => {
@@ -491,4 +491,19 @@ export function useStore() {
     deleteWikiPage,
     reorderWikiPage,
   };
+}
+
+type Store = ReturnType<typeof useStoreData>;
+
+const StoreContext = createContext<Store | null>(null);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const store = useStoreData();
+  return createElement(StoreContext.Provider, { value: store }, children);
+}
+
+export function useStore(): Store {
+  const store = useContext(StoreContext);
+  if (!store) throw new Error('useStore must be used within a StoreProvider');
+  return store;
 }
