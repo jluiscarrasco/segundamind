@@ -72,18 +72,19 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
 
     setGeneratingAI(true);
     try {
-      const prompt = `Soy un usuario con TDAH intentando dividir una tarea compleja en micro-tareas manejables para evitar procrastinación.
+      const prompt = `Soy un usuario con TDAH y necesito descomponer una tarea compleja en pasos ejecutables para evitar procrastinación.
 
 Tarea: "${name}"
 ${description ? `Descripción: ${description}` : ''}
 
-Por favor, proporciona 3-5 subtareas pequeñas, específicas y acciones concretas que se puedan ejecutar en orden.
-Cada subtarea debe ser:
-- Breve (máximo 10 palabras)
-- Accionable (empezar con un verbo)
-- Pequeña (tomando 5-15 minutos cada una)
+Analiza la tarea y descomponla en todos los pasos necesarios y realistas para completarla. No hay límite de pasos.
+- Algunos pasos pueden ser cortos (15-30 minutos)
+- Otros pueden ser largos (varias horas, incluso días)
+- Incluye pasos de preparación, aprendizaje, práctica, evaluación si aplica
+- Cada paso debe ser accionable y específico
 
-Responde SOLO con un JSON array: [{"name": "Subtarea 1"}, {"name": "Subtarea 2"}, ...]`;
+Responde SOLO con un JSON array con nombre de cada paso:
+[{"name": "Paso 1: descripción breve"}, {"name": "Paso 2: descripción breve"}, ...]`;
 
       const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
 
