@@ -24,7 +24,7 @@ interface Props {
   onUpdateTask: (id: string, data: Partial<Task>) => void;
 }
 
-export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl }: Props) {
+export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl, onUpdateTask }: Props) {
   const { user, signOut: authSignOut } = useAuth();
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
