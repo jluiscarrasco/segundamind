@@ -94,7 +94,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
             <Input
               value={selectedTask.name}
               onChange={(e) => onUpdateTask(selectedTask.id, { name: e.target.value })}
-              className="mt-0.5 h-8 text-sm"
+              className="mt-0.5 h-8 text-xs"
             />
           </div>
 
