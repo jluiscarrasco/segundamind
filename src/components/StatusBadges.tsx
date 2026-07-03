@@ -41,7 +41,7 @@ export function ImportanceBadge({ importance }: { importance: Importance }) {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bgMap[importance]}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${bgMap[importance]}`}>
       <ImportanceDot importance={importance} />
       {labels[importance]}
     </span>
