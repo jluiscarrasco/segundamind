@@ -78,32 +78,32 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           <span className="text-sm font-medium">Volver</span>
         </button>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Nombre</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nombre</label>
             <Input
               value={selectedTask.name}
               onChange={(e) => onUpdateTask(selectedTask.id, { name: e.target.value })}
-              className="mt-1"
+              className="mt-0.5 h-8 text-sm"
             />
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Descripción</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Descripción</label>
             <Textarea
               value={selectedTask.description || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { description: e.target.value })}
-              className="mt-1 min-h-[80px] resize-none text-sm"
+              className="mt-0.5 min-h-[60px] resize-none text-sm"
               placeholder="Descripción (opcional)"
             />
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Importancia</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Importancia</label>
             <select
               value={selectedTask.importance}
               onChange={(e) => onUpdateTask(selectedTask.id, { importance: e.target.value as Task['importance'] })}
-              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
             >
               {Object.entries(IMPORTANCE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -112,11 +112,11 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Estado</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Estado</label>
             <select
               value={selectedTask.status}
               onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
-              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
             >
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -125,21 +125,21 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Fecha de revisión</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Fecha de revisión</label>
             <Input
               type="date"
               value={selectedTask.reviewDate || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
-              className="mt-1"
+              className="mt-0.5 h-8 text-sm"
             />
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Esfuerzo estimado</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo estimado</label>
             <select
               value={selectedTask.effort || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
-              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
             >
               <option value="">Sin estimar</option>
               {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
