@@ -152,6 +152,18 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
     return map;
   }, [allItems]);
 
+  // Estimated real workload per day: sum of task effort (minutes) for
+  // non-finished tasks scheduled that day.
+  const effortByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    tasks.forEach(t => {
+      if (t.reviewDate && t.effort && t.status !== 'finished') {
+        map[t.reviewDate] = (map[t.reviewDate] || 0) + t.effort;
+      }
+    });
+    return map;
+  }, [tasks]);
+
   const handleDragStart = useCallback((e: React.DragEvent, item: CalendarItem) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ type: item.type, id: item.id }));
     e.dataTransfer.effectAllowed = 'move';
@@ -187,6 +199,21 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
     normal: 'border-l-primary',
     low: 'border-l-muted-foreground/40',
     none: 'border-l-muted-foreground/20',
+  };
+
+  // Full workday ≈ 8h (480 min). Above that, the day is over capacity.
+  const WORKDAY_MINUTES = 480;
+
+  const formatWorkload = (minutes: number): string => {
+    if (minutes < 60) return `${minutes}m`;
+    const hours = minutes / 60;
+    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`;
+  };
+
+  const workloadColor = (minutes: number): string => {
+    if (minutes > WORKDAY_MINUTES) return 'bg-destructive/12 text-destructive';
+    if (minutes >= WORKDAY_MINUTES * 0.6) return 'bg-importance-important/12 text-importance-important';
+    return 'bg-secondary text-muted-foreground';
   };
 
   return (
@@ -249,6 +276,7 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
         {days.map((day, i) => {
           const key = formatDateKey(day);
           const dayItems = itemsByDate[key] || [];
+          const dayEffort = effortByDate[key] || 0;
           const isToday = key === todayKey;
           const isCurrentMonth = mode === 'month' ? day.getMonth() === currentMonth : true;
           const isOverdue = key < todayKey;
@@ -282,9 +310,19 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
                 }`}>
                   {day.getDate()}
                 </span>
-                {dayItems.length > maxVisible && (
-                  <span className="text-[8px] text-muted-foreground/60 font-medium">+{dayItems.length - maxVisible}</span>
-                )}
+                <div className="flex items-center gap-1">
+                  {dayEffort > 0 && (
+                    <span
+                      title={`Carga estimada: ${formatWorkload(dayEffort)}`}
+                      className={`text-[8px] font-bold px-1 py-0.5 rounded ${workloadColor(dayEffort)}`}
+                    >
+                      {formatWorkload(dayEffort)}
+                    </span>
+                  )}
+                  {dayItems.length > maxVisible && (
+                    <span className="text-[8px] text-muted-foreground/60 font-medium">+{dayItems.length - maxVisible}</span>
+                  )}
+                </div>
               </div>
 
               {/* Items */}
