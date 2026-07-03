@@ -103,7 +103,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
             <select
               value={selectedTask.importance}
               onChange={(e) => onUpdateTask(selectedTask.id, { importance: e.target.value as Task['importance'] })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
             >
               {Object.entries(IMPORTANCE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -116,7 +116,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
             <select
               value={selectedTask.status}
               onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
             >
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -131,7 +131,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                 type="date"
                 value={selectedTask.reviewDate || ''}
                 onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
-                className="h-8 text-sm flex-1"
+                className="h-7 text-xs flex-1"
               />
             </div>
             <div className="mt-1 flex gap-1">
@@ -173,7 +173,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
             <select
               value={selectedTask.effort || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-sm h-8"
+              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
             >
               <option value="">Sin estimar</option>
               {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
