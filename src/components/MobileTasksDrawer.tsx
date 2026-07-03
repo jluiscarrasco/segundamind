@@ -23,6 +23,7 @@ interface DrawerItem {
   reviewDate: string;
   parentInfo: string;
   status: Task['status'];
+  effort: Task['effort'];
 }
 
 export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: MobileTasksDrawerProps) {
@@ -41,6 +42,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
         reviewDate: t.reviewDate!,
         parentInfo: [area?.name, project?.name].filter(Boolean).join(' › '),
         status: t.status,
+        effort: t.effort,
       };
     };
 
@@ -55,6 +57,8 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
   }, [tasks, projects, areas, todayKey]);
 
   const total = overdue.length + today.length;
+  const totalEffortMinutes = [...overdue, ...today].reduce((sum, item) => sum + (item.effort || 0), 0);
+  const totalEffortHours = totalEffortMinutes / 60;
 
   const formatOverdue = (d: string) => {
     const diff = Math.floor(
@@ -207,6 +211,20 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : '?'}
         </span>
       )}
+      {item.effort && (
+        <span className="text-[10px] font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded shrink-0">
+          {item.effort < 60 ? `${item.effort}m` : `${item.effort / 60}h`}
+        </span>
+      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onUpdateTask(item.id, { reviewDate: addDaysCETKey(1) });
+        }}
+        className="text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors shrink-0"
+      >
+        +1
+      </button>
       <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-primary'}`}>
         {dateLabel}
       </span>
@@ -241,9 +259,14 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           <ListChecks className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Tareas pendientes</span>
           {total > 0 && (
-            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-              {total}
-            </span>
+            <div className="flex gap-1.5 items-center">
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
+                {total}
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                {totalEffortHours.toFixed(1)}h
+              </span>
+            </div>
           )}
           {isOpen ? (
             <ChevronDown className="w-4 h-4 text-muted-foreground ml-1" />
