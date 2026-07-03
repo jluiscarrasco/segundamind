@@ -21,6 +21,7 @@ interface Props {
   onAdd: (item: Omit<InboxItem, 'id' | 'createdAt'>) => Promise<InboxItem | null> | void;
   onRemove: (id: string) => void;
   onEnrichUrl?: (inboxId: string, url: string) => void;
+  onUpdateTask: (id: string, data: Partial<Task>) => void;
 }
 
 export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl }: Props) {
@@ -459,7 +460,7 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
         )}
       </div>
 
-      <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} />
+      <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} onUpdateTask={onUpdateTask} />
     </div>
   );
 }

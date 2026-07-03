@@ -120,6 +120,7 @@ const Index = () => {
         onAdd={store.addInboxItem}
         onRemove={store.removeInboxItem}
         onEnrichUrl={store.enrichUrlInboxItem}
+        onUpdateTask={store.updateTask}
       />
     );
   }

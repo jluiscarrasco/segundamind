@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, ListChecks } from 'lucide-react';
+import { ChevronUp, ChevronDown, ListChecks, ArrowLeft } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
-import { STATUS_LABELS } from '@/types';
+import { STATUS_LABELS, EFFORT_OPTIONS, IMPORTANCE_LABELS } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET } from '@/lib/dateUtils';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 
 interface MobileTasksDrawerProps {
   tasks: Task[];
   projects: Project[];
   areas: Area[];
+  onUpdateTask: (id: string, data: Partial<Task>) => void;
 }
 
 interface DrawerItem {
@@ -21,8 +25,9 @@ interface DrawerItem {
   status: Task['status'];
 }
 
-export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerProps) {
+export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: MobileTasksDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const todayKey = getTodayKeyCET();
 
   const { overdue, today } = useMemo(() => {
@@ -58,10 +63,100 @@ export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerP
     return diff === 1 ? 'Ayer' : `Hace ${diff}d`;
   };
 
+  const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
+
+  const renderTaskEditor = () => {
+    if (!selectedTask) return null;
+
+    return (
+      <div className="flex flex-col h-full">
+        <button
+          onClick={() => setSelectedTaskId(null)}
+          className="flex items-center gap-2 px-4 py-3 text-primary hover:bg-secondary/30 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Volver</span>
+        </button>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Nombre</label>
+            <Input
+              value={selectedTask.name}
+              onChange={(e) => onUpdateTask(selectedTask.id, { name: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Descripción</label>
+            <Textarea
+              value={selectedTask.description || ''}
+              onChange={(e) => onUpdateTask(selectedTask.id, { description: e.target.value })}
+              className="mt-1 min-h-[80px] resize-none text-sm"
+              placeholder="Descripción (opcional)"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Importancia</label>
+            <select
+              value={selectedTask.importance}
+              onChange={(e) => onUpdateTask(selectedTask.id, { importance: e.target.value as Task['importance'] })}
+              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+            >
+              {Object.entries(IMPORTANCE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Estado</label>
+            <select
+              value={selectedTask.status}
+              onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
+              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+            >
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Fecha de revisión</label>
+            <Input
+              type="date"
+              value={selectedTask.reviewDate || ''}
+              onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase">Esfuerzo estimado</label>
+            <select
+              value={selectedTask.effort || ''}
+              onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
+              className="mt-1 w-full px-2.5 py-1.5 rounded border border-border bg-background text-foreground text-sm"
+            >
+              <option value="">Sin estimar</option>
+              {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderRow = (item: DrawerItem, dateLabel: string, isOverdue: boolean) => (
     <div
       key={item.id}
-      className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-border/60 last:border-0 ${
+      onClick={() => setSelectedTaskId(item.id)}
+      className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-border/60 last:border-0 cursor-pointer hover:bg-secondary/20 transition-colors ${
         item.status === 'blocked' ? 'bg-muted/20 opacity-60' : item.status === 'funnel' ? 'bg-secondary/20 opacity-75' : ''
       }`}
     >
@@ -124,7 +219,11 @@ export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerP
         </button>
 
         {isOpen && (
-          <div className="flex-1 overflow-y-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex-1 overflow-hidden">
+            {selectedTaskId ? (
+              renderTaskEditor()
+            ) : (
+              <div className="overflow-y-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {total === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                 No hay tareas vencidas ni para hoy 🎉
@@ -152,6 +251,8 @@ export function MobileTasksDrawer({ tasks, projects, areas }: MobileTasksDrawerP
                   </div>
                 )}
               </>
+            )}
+              </div>
             )}
           </div>
         )}
