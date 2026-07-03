@@ -122,9 +122,10 @@ Responde SOLO con un JSON array con nombre de cada paso:
 
       let subtasksData;
       try {
-        const content = (result.content || '').trim();
+        console.log('Full result object:', result);
+        const content = (result.content || result.message || result.assistant || JSON.stringify(result)).trim();
 
-        if (!content) throw new Error('Empty response');
+        if (!content || content === '{}') throw new Error('Empty response');
 
         // Try to extract JSON array from content
         let jsonStr = '';
@@ -141,7 +142,8 @@ Responde SOLO con un JSON array con nombre de cada paso:
 
         subtasksData = JSON.parse(jsonStr);
       } catch (e) {
-        console.error('Error parsing subtasks:', e, 'Content:', result.content);
+        console.error('Error parsing subtasks:', e);
+        console.error('Full result:', JSON.stringify(result, null, 2));
         toast.error('No se pudo procesar la respuesta de IA');
         return;
       }
