@@ -30,8 +30,9 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const todayKey = getTodayKeyCET();
+  const tomorrowKey = addDaysCETKey(1);
 
-  const { overdue, today } = useMemo(() => {
+  const { overdue, today, tomorrow } = useMemo(() => {
     const build = (t: Task): DrawerItem => {
       const project = projects.find(p => p.id === t.projectId);
       const area = project ? areas.find(a => a.id === project.areaId) : null;
@@ -52,12 +53,13 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
       .map(build)
       .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate));
     const today = relevant.filter(t => t.reviewDate === todayKey).map(build);
+    const tomorrow = relevant.filter(t => t.reviewDate === tomorrowKey).map(build);
 
-    return { overdue, today };
-  }, [tasks, projects, areas, todayKey]);
+    return { overdue, today, tomorrow };
+  }, [tasks, projects, areas, todayKey, tomorrowKey]);
 
-  const total = overdue.length + today.length;
-  const totalEffortMinutes = [...overdue, ...today].reduce((sum, item) => sum + (item.effort || 0), 0);
+  const total = overdue.length + today.length + tomorrow.length;
+  const totalEffortMinutes = [...overdue, ...today, ...tomorrow].reduce((sum, item) => sum + (item.effort || 0), 0);
   const totalEffortHours = totalEffortMinutes / 60;
 
   const formatOverdue = (d: string) => {
@@ -283,7 +285,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
               <div className="overflow-y-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {total === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No hay tareas vencidas ni para hoy 🎉
+                No hay tareas vencidas, para hoy ni mañana 🎉
               </div>
             ) : (
               <>
@@ -305,6 +307,16 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                       </h3>
                     </div>
                     {today.map(item => renderRow(item, 'Hoy', false))}
+                  </div>
+                )}
+                {tomorrow.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 bg-secondary/8">
+                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        Mañana ({tomorrow.length})
+                      </h3>
+                    </div>
+                    {tomorrow.map(item => renderRow(item, 'Mañana', false))}
                   </div>
                 )}
               </>
