@@ -1,11 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import {
-  initializeFirestore,
-  connectFirestoreEmulator,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from 'firebase/firestore';
+import { initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'firebase/app-check';
 
@@ -26,14 +21,7 @@ export const auth = getAuth(app);
 // 'Listen' stream transport errored" / 400 Bad Request on networks (common
 // on mobile carriers, VPNs, corporate proxies, some ad blockers) that don't
 // support Firestore's default fetch-streaming transport.
-// persistentLocalCache keeps Firestore data in IndexedDB: on reload/HMR the
-// listeners resume from cache and only fetch changed docs, instead of
-// re-reading every collection from the server (which was burning through the
-// free read quota during development).
-export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-});
+export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 export const storage = getStorage(app);
 
 // App Check only runs in production builds: in local dev the reCAPTCHA

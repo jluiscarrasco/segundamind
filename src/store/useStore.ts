@@ -73,6 +73,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, areas: snapshot.docs.map(mapArea).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }));
             }
+          },
+          (error) => {
+            console.error('❌ areas listener error:', error.code, error.message);
           }
         ));
 
@@ -82,6 +85,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, projects: snapshot.docs.map(mapProject).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }));
             }
+          },
+          (error) => {
+            console.error('❌ projects listener error:', error.code, error.message);
           }
         ));
 
@@ -91,6 +97,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, tasks: snapshot.docs.map(mapTask).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }));
             }
+          },
+          (error) => {
+            console.error('❌ tasks listener error:', error.code, error.message);
           }
         ));
 
@@ -100,6 +109,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, inbox: snapshot.docs.map(mapInbox).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }));
             }
+          },
+          (error) => {
+            console.error('❌ inbox_items listener error:', error.code, error.message);
           }
         ));
 
@@ -109,6 +121,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, resources: snapshot.docs.map(mapResource).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) }));
             }
+          },
+          (error) => {
+            console.error('❌ resources listener error:', error.code, error.message);
           }
         ));
 
@@ -118,6 +133,9 @@ function useStoreData() {
             if (!cancelled) {
               setData(d => ({ ...d, wikiPages: snapshot.docs.map(mapWikiPage).sort((a, b) => (a.position ?? 0) - (b.position ?? 0)) }));
             }
+          },
+          (error) => {
+            console.error('❌ wiki_pages listener error:', error.code, error.message);
           }
         ));
 
