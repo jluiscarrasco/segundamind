@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, ListChecks, ArrowLeft } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
 import { STATUS_LABELS, EFFORT_OPTIONS, IMPORTANCE_LABELS } from '@/types';
-import { ImportanceDot } from './StatusBadges';
+import { ImportanceBadge, StatusIcon } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey, dateToCETKey } from '@/lib/dateUtils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -192,26 +192,21 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
     );
   };
 
-  const renderRow = (item: DrawerItem, dateLabel: string, isOverdue: boolean) => (
+  const renderRow = (item: DrawerItem) => (
     <div
       key={item.id}
       onClick={() => setSelectedTaskId(item.id)}
-      className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-border/60 last:border-0 cursor-pointer hover:bg-secondary/20 transition-colors ${
+      className={`flex items-center gap-2 px-4 py-2.5 border-b border-border/60 last:border-0 cursor-pointer hover:bg-secondary/20 transition-colors ${
         item.status === 'blocked' ? 'bg-muted/20 opacity-60' : item.status === 'funnel' ? 'bg-secondary/20 opacity-75' : ''
       }`}
     >
-      <ImportanceDot importance={item.importance} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="text-sm text-foreground truncate">{item.name}</p>
-        {item.parentInfo && <p className="text-[11px] text-muted-foreground truncate">{item.parentInfo}</p>}
+        {item.parentInfo && <p className="text-[10px] text-muted-foreground truncate">{item.parentInfo}</p>}
       </div>
+      <ImportanceBadge importance={item.importance} />
       {item.status !== 'active' && item.status !== 'ready' && (
-        <span
-          title={STATUS_LABELS[item.status]}
-          className="text-[10px] font-bold px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0"
-        >
-          {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : '?'}
-        </span>
+        <StatusIcon status={item.status} className="text-muted-foreground" />
       )}
       {item.effort && (
         <span className="text-[10px] font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded shrink-0">
@@ -227,9 +222,6 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
       >
         +1
       </button>
-      <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-primary'}`}>
-        {dateLabel}
-      </span>
     </div>
   );
 
@@ -296,7 +288,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                         Vencidas ({overdue.length})
                       </h3>
                     </div>
-                    {overdue.map(item => renderRow(item, formatOverdue(item.reviewDate), true))}
+                    {overdue.map(item => renderRow(item))}
                   </div>
                 )}
                 {today.length > 0 && (
@@ -306,7 +298,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                         Para hoy ({today.length})
                       </h3>
                     </div>
-                    {today.map(item => renderRow(item, 'Hoy', false))}
+                    {today.map(item => renderRow(item))}
                   </div>
                 )}
                 {tomorrow.length > 0 && (
@@ -316,7 +308,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                         Mañana ({tomorrow.length})
                       </h3>
                     </div>
-                    {tomorrow.map(item => renderRow(item, 'Mañana', false))}
+                    {tomorrow.map(item => renderRow(item))}
                   </div>
                 )}
               </>
