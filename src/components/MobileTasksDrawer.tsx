@@ -258,28 +258,16 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           <ListChecks className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Tareas pendientes</span>
           {total > 0 && (
-            <div className="flex gap-2 items-center text-[10px]">
+            <div className="flex gap-2 items-center">
               {today.length > 0 && (
-                <div className="flex gap-1 items-center">
-                  <span className="font-medium text-muted-foreground">Hoy</span>
-                  <span className="font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-                    {today.length}
-                  </span>
-                  <span className="font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-                    {todayEffortHours.toFixed(1)}h
-                  </span>
-                </div>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-primary/15 text-primary">
+                  Hoy {today.length} · {todayEffortHours.toFixed(1)}h
+                </span>
               )}
               {tomorrow.length > 0 && (
-                <div className="flex gap-1 items-center">
-                  <span className="font-medium text-muted-foreground">Mañana</span>
-                  <span className="font-bold px-1.5 py-0.5 rounded-full bg-secondary/40 text-muted-foreground">
-                    {tomorrow.length}
-                  </span>
-                  <span className="font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-                    {tomorrowEffortHours.toFixed(1)}h
-                  </span>
-                </div>
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-secondary/30 text-muted-foreground">
+                  Mañana {tomorrow.length} · {tomorrowEffortHours.toFixed(1)}h
+                </span>
               )}
             </div>
           )}
