@@ -76,19 +76,21 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
 
     setGeneratingAI(true);
     try {
-      const prompt = `Soy un usuario con TDAH y necesito descomponer una tarea compleja en pasos ejecutables para evitar procrastinación.
+      const prompt = `Soy un usuario con TDAH. Descompón esta tarea en una SECUENCIA de acciones concretas que, ejecutadas en orden, la completan de principio a fin. El objetivo es vencer la procrastinación: cada acción debe ser tan clara que pueda empezarla sin pensar.
 
 Tarea: "${name}"
 ${description ? `Descripción: ${description}` : ''}
 
-Analiza la tarea y descomponla en todos los pasos necesarios y realistas para completarla. No hay límite de pasos: usa los que hagan falta.
-- Algunos pasos pueden ser cortos (15-30 minutos) y otros largos (horas o días)
-- Incluye pasos de preparación, aprendizaje, práctica o evaluación si aplican
-- Cada paso debe ser accionable, específico y empezar con un verbo
-- Ordénalos en la secuencia en que deben ejecutarse
+Reglas:
+- Acciones, NO recomendaciones ni consejos. Mal: "Informarse sobre requisitos". Bien: "Buscar en la web de la DGT los requisitos del A2"
+- Cada acción empieza con un verbo en infinitivo y es autocontenida: al leerla sé exactamente qué hacer
+- La primera acción debe ser muy pequeña y fácil (romper la barrera de empezar)
+- Orden estrictamente secuencial: completar una desbloquea la siguiente
+- Nombre corto y escaneable: máximo 8 palabras. Sin numerar (el orden ya lo da la lista)
+- Usa las acciones que hagan falta, sin límite
 
 Responde SOLO con un JSON array, sin texto adicional:
-[{"name": "Paso 1..."}, {"name": "Paso 2..."}]`;
+[{"name": "..."}, {"name": "..."}]`;
 
       let fullContent = '';
       for await (const chunk of cloudFunctions.aiAssistantStream({ messages: [{ role: 'user', content: prompt }] }, user)) {
@@ -368,7 +370,8 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
                           setSubtasks(updated);
                         }}
                         placeholder="Nombre de subtarea"
-                        className={`flex-1 bg-transparent border-0 text-xs outline-none ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}
+                        title={subtask.name}
+                        className={`flex-1 bg-transparent border-0 text-xs outline-none truncate ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}
                       />
                       <button
                         type="button"
