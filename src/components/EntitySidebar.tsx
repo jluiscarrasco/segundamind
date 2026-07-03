@@ -76,18 +76,18 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
 
     setGeneratingAI(true);
     try {
-      const prompt = `Soy un usuario con TDAH. Descompón esta tarea en una SECUENCIA de acciones concretas que, ejecutadas en orden, la completan de principio a fin. El objetivo es vencer la procrastinación: cada acción debe ser tan clara que pueda empezarla sin pensar.
+      const prompt = `Soy un usuario con TDAH. Descompón esta tarea compleja en una SECUENCIA de pasos que, ejecutados en orden, la completan de principio a fin. Esta ayuda se pide para tareas que requieren esfuerzo mental, así que cada paso debe tener ENTIDAD propia: una acción que hace avanzar la tarea de verdad, no un micro-gesto.
 
 Tarea: "${name}"
 ${description ? `Descripción: ${description}` : ''}
 
 Reglas:
-- Acciones, NO recomendaciones ni consejos. Mal: "Informarse sobre requisitos". Bien: "Buscar en la web de la DGT los requisitos del A2"
-- Cada acción empieza con un verbo en infinitivo y es autocontenida: al leerla sé exactamente qué hacer
-- La primera acción debe ser muy pequeña y fácil (romper la barrera de empezar)
-- Orden estrictamente secuencial: completar una desbloquea la siguiente
-- Nombre corto y escaneable: máximo 8 palabras. Sin numerar (el orden ya lo da la lista)
-- Usa las acciones que hagan falta, sin límite
+- Cada paso es una acción con sustancia que produce un avance real. PROHIBIDO trocear en gestos triviales que cualquiera hace sin pensar. Ridículo: "Abrir un navegador", "Coger el teléfono", "Ponerse las zapatillas". Bien (para "Sacarme el carnet de moto"): "Comparar precios en varias autoescuelas", "Verificar qué horarios encajan con mi trabajo", "Reservar la matrícula en la elegida"
+- Acciones concretas, NO consejos ni objetivos vagos. Mal: "Informarse sobre requisitos". Bien: "Buscar en la web de la DGT los requisitos del A2"
+- Cada paso empieza con un verbo en infinitivo y es autocontenido
+- Orden estrictamente secuencial: completar uno desbloquea el siguiente
+- Nombre corto y escaneable: máximo 8 palabras, en español. Sin numerar (el orden lo da la lista)
+- Usa solo los pasos que la tarea necesite de verdad, sin relleno
 
 Responde SOLO con un JSON array, sin texto adicional:
 [{"name": "..."}, {"name": "..."}]`;
