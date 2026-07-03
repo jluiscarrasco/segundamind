@@ -86,11 +86,24 @@ Analiza la tarea y descomponla en todos los pasos necesarios y realistas para co
 Responde SOLO con un JSON array con nombre de cada paso:
 [{"name": "Paso 1: descripción breve"}, {"name": "Paso 2: descripción breve"}, ...]`;
 
-      const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
+      const token = await user.getIdToken();
+      const response = await fetch('http://localhost:8082/api/ai-assistant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+      });
+
+      if (!response.ok) throw new Error('API error');
+      const result = await response.json();
 
       let subtasksData;
       try {
-        const content = (result.content || result.message || '').trim();
+        const content = (result.content || '').trim();
+
+        if (!content) throw new Error('Empty response');
 
         // Try to extract JSON array from content
         let jsonStr = '';
