@@ -154,6 +154,12 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                 Sat
               </button>
               <button
+                onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(0) })}
+                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                Sun
+              </button>
+              <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: addDaysCETKey(7) })}
                 className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
