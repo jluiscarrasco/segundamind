@@ -62,6 +62,11 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
   const totalEffortMinutes = [...overdue, ...today, ...tomorrow].reduce((sum, item) => sum + (item.effort || 0), 0);
   const totalEffortHours = totalEffortMinutes / 60;
 
+  const todayEffortMinutes = today.reduce((sum, item) => sum + (item.effort || 0), 0);
+  const todayEffortHours = todayEffortMinutes / 60;
+  const tomorrowEffortMinutes = tomorrow.reduce((sum, item) => sum + (item.effort || 0), 0);
+  const tomorrowEffortHours = tomorrowEffortMinutes / 60;
+
   const formatOverdue = (d: string) => {
     const diff = Math.floor(
       (new Date(todayKey + 'T00:00:00').getTime() - new Date(d + 'T00:00:00').getTime()) / 86400000
@@ -253,13 +258,29 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           <ListChecks className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-foreground">Tareas pendientes</span>
           {total > 0 && (
-            <div className="flex gap-1.5 items-center">
-              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-                {total}
-              </span>
-              <span className="text-[10px] font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-                {totalEffortHours.toFixed(1)}h
-              </span>
+            <div className="flex gap-2 items-center text-[10px]">
+              {today.length > 0 && (
+                <div className="flex gap-1 items-center">
+                  <span className="font-medium text-muted-foreground">Hoy</span>
+                  <span className="font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
+                    {today.length}
+                  </span>
+                  <span className="font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                    {todayEffortHours.toFixed(1)}h
+                  </span>
+                </div>
+              )}
+              {tomorrow.length > 0 && (
+                <div className="flex gap-1 items-center">
+                  <span className="font-medium text-muted-foreground">Mañana</span>
+                  <span className="font-bold px-1.5 py-0.5 rounded-full bg-secondary/40 text-muted-foreground">
+                    {tomorrow.length}
+                  </span>
+                  <span className="font-medium text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                    {tomorrowEffortHours.toFixed(1)}h
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {isOpen ? (
