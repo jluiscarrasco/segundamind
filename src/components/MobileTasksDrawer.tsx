@@ -1,13 +1,10 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, ListChecks, ArrowLeft, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, ListChecks, ArrowLeft } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
 import { STATUS_LABELS, EFFORT_OPTIONS, IMPORTANCE_LABELS } from '@/types';
 import { ImportanceBadge, StatusIcon } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey, dateToCETKey } from '@/lib/dateUtils';
-import { useAuth } from '@/contexts/AuthContext';
-import { cloudFunctions } from '@/lib/cloud-functions';
-import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -30,65 +27,10 @@ interface DrawerItem {
 }
 
 export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: MobileTasksDrawerProps) {
-  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [generatingAI, setGeneratingAI] = useState(false);
   const todayKey = getTodayKeyCET();
   const tomorrowKey = addDaysCETKey(1);
-
-  const generateSubtasksWithAI = async (taskName: string, taskDescription: string) => {
-    if (!user || !selectedTaskId) return;
-
-    setGeneratingAI(true);
-    try {
-      const prompt = `Soy un usuario con TDAH intentando dividir una tarea compleja en micro-tareas manejables para evitar procrastinación.
-
-Tarea: "${taskName}"
-${taskDescription ? `Descripción: ${taskDescription}` : ''}
-
-Por favor, proporciona 3-5 subtareas pequeñas, específicas y acciones concretas que se puedan ejecutar en orden.
-Cada subtarea debe ser:
-- Breve (máximo 10 palabras)
-- Accionable (empezar con un verbo)
-- Pequeña (tomando 5-15 minutos cada una)
-
-Responde SOLO con un JSON array: [{"name": "Subtarea 1"}, {"name": "Subtarea 2"}, ...]`;
-
-      const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
-
-      let subtasksData;
-      try {
-        // Intentar extraer JSON del contenido
-        const content = result.content || '';
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        subtasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-      } catch (e) {
-        console.error('Error parsing JSON:', e);
-        toast.error('No se pudo procesar la respuesta de IA');
-        return;
-      }
-
-      if (Array.isArray(subtasksData) && subtasksData.length > 0) {
-        const newSubtasks = subtasksData.map((item: any) => ({
-          id: Math.random().toString(36),
-          name: item.name || '',
-          completed: false,
-        }));
-
-        const selectedTask = tasks.find(t => t.id === selectedTaskId);
-        if (selectedTask) {
-          onUpdateTask(selectedTaskId, { subtasks: newSubtasks });
-          toast.success(`${newSubtasks.length} subtareas generadas`);
-        }
-      }
-    } catch (error) {
-      console.error('Error generating subtasks:', error);
-      toast.error('Error al generar subtareas');
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
 
   const { overdue, today, tomorrow } = useMemo(() => {
     const build = (t: Task): DrawerItem => {
@@ -249,76 +191,6 @@ Responde SOLO con un JSON array: [{"name": "Subtarea 1"}, {"name": "Subtarea 2"}
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Subtareas</label>
-            <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
-              {selectedTask.subtasks && selectedTask.subtasks.length > 0 ? (
-                selectedTask.subtasks.map((subtask, idx) => (
-                  <div key={subtask.id} className="flex items-center gap-2 px-2 py-1.5 bg-secondary/20 rounded text-xs">
-                    <input
-                      type="checkbox"
-                      checked={subtask.completed}
-                      onChange={(e) => {
-                        const updated = [...(selectedTask.subtasks || [])];
-                        updated[idx].completed = e.target.checked;
-                        onUpdateTask(selectedTask.id, { subtasks: updated });
-                      }}
-                      className="w-3 h-3 shrink-0"
-                    />
-                    <input
-                      type="text"
-                      value={subtask.name}
-                      onChange={(e) => {
-                        const updated = [...(selectedTask.subtasks || [])];
-                        updated[idx].name = e.target.value;
-                        onUpdateTask(selectedTask.id, { subtasks: updated });
-                      }}
-                      placeholder="Nombre de subtarea"
-                      className={`flex-1 bg-transparent border-0 text-xs outline-none ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}
-                    />
-                    <button
-                      onClick={() => {
-                        const updated = selectedTask.subtasks?.filter(s => s.id !== subtask.id) || [];
-                        onUpdateTask(selectedTask.id, { subtasks: updated });
-                      }}
-                      className="text-muted-foreground hover:text-destructive text-xs shrink-0"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-[10px] text-muted-foreground italic">Sin subtareas</p>
-              )}
-            </div>
-            <div className="mt-2 flex gap-1">
-              <button
-                onClick={() => {
-                  const newSubtask = { id: Math.random().toString(36), name: '', completed: false };
-                  const updated = [...(selectedTask.subtasks || []), newSubtask];
-                  onUpdateTask(selectedTask.id, { subtasks: updated });
-                }}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex-1"
-              >
-                + Subtarea
-              </button>
-              <button
-                onClick={() => generateSubtasksWithAI(selectedTask.name, selectedTask.description)}
-                disabled={generatingAI}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-              >
-                {generatingAI ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Generando...
-                  </>
-                ) : (
-                  '🤖 IA'
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </div>

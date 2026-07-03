@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download } from 'lucide-react';
-import type { Importance, Status, Resource, Effort } from '@/types';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download, Sparkles } from 'lucide-react';
+import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDrive } from '@/hooks/useDrive';
+import { cloudFunctions } from '@/lib/cloud-functions';
 import { toast } from 'sonner';
 
 export interface EntityFormData {
@@ -14,6 +15,7 @@ export interface EntityFormData {
   status: Status;
   reviewDate: string | null;
   effort?: Effort;
+  subtasks?: Subtask[];
 }
 
 
@@ -40,6 +42,8 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [status, setStatus] = useState<Status>(initialData?.status || 'funnel');
   const [reviewDate, setReviewDate] = useState(initialData?.reviewDate || '');
   const [effort, setEffort] = useState<Effort>(initialData?.effort ?? null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>(initialData?.subtasks ?? []);
+  const [generatingAI, setGeneratingAI] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -61,6 +65,54 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     onAddResource({ entityType: type, entityId, type: 'note', content: newNote.trim() });
     setNewNote('');
     setShowNoteInput(false);
+  };
+
+  const generateSubtasksWithAI = async () => {
+    if (!user || type !== 'task') return;
+
+    setGeneratingAI(true);
+    try {
+      const prompt = `Soy un usuario con TDAH intentando dividir una tarea compleja en micro-tareas manejables para evitar procrastinación.
+
+Tarea: "${name}"
+${description ? `Descripción: ${description}` : ''}
+
+Por favor, proporciona 3-5 subtareas pequeñas, específicas y acciones concretas que se puedan ejecutar en orden.
+Cada subtarea debe ser:
+- Breve (máximo 10 palabras)
+- Accionable (empezar con un verbo)
+- Pequeña (tomando 5-15 minutos cada una)
+
+Responde SOLO con un JSON array: [{"name": "Subtarea 1"}, {"name": "Subtarea 2"}, ...]`;
+
+      const result = await cloudFunctions.aiAssistant({ messages: [{ role: 'user', content: prompt }] }, user);
+
+      let subtasksData;
+      try {
+        const content = result.content || '';
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        subtasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+      } catch (e) {
+        console.error('Error parsing JSON:', e);
+        toast.error('No se pudo procesar la respuesta de IA');
+        return;
+      }
+
+      if (Array.isArray(subtasksData) && subtasksData.length > 0) {
+        const newSubtasksList = subtasksData.map((item: any) => ({
+          id: Math.random().toString(36),
+          name: item.name || '',
+          completed: false,
+        }));
+        setSubtasks(newSubtasksList);
+        toast.success(`${newSubtasksList.length} subtareas generadas`);
+      }
+    } catch (error) {
+      console.error('Error generating subtasks:', error);
+      toast.error('Error al generar subtareas');
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
@@ -111,7 +163,14 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), description: description.trim(), importance, status, reviewDate: reviewDate || null, ...(type === 'task' ? { effort } : {}) });
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+      importance,
+      status,
+      reviewDate: reviewDate || null,
+      ...(type === 'task' ? { effort, subtasks: subtasks.length > 0 ? subtasks : undefined } : {})
+    });
   };
 
   return (
@@ -241,6 +300,71 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Subtasks - only for tasks */}
+          {type === 'task' && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-medium text-muted-foreground">Subtareas</label>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSubtasks([...subtasks, { id: Math.random().toString(36), name: '', completed: false }])}
+                    className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" /> Añadir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={generateSubtasksWithAI}
+                    disabled={generatingAI}
+                    className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3 h-3" /> {generatingAI ? 'Generando...' : 'IA'}
+                  </button>
+                </div>
+              </div>
+
+              {subtasks.length > 0 ? (
+                <div className="space-y-1.5 mb-2">
+                  {subtasks.map((subtask, idx) => (
+                    <div key={subtask.id} className="flex items-center gap-2 bg-secondary/30 rounded-md px-2.5 py-2">
+                      <input
+                        type="checkbox"
+                        checked={subtask.completed}
+                        onChange={(e) => {
+                          const updated = [...subtasks];
+                          updated[idx].completed = e.target.checked;
+                          setSubtasks(updated);
+                        }}
+                        className="w-3.5 h-3.5 shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={subtask.name}
+                        onChange={(e) => {
+                          const updated = [...subtasks];
+                          updated[idx].name = e.target.value;
+                          setSubtasks(updated);
+                        }}
+                        placeholder="Nombre de subtarea"
+                        className={`flex-1 bg-transparent border-0 text-xs outline-none ${subtask.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSubtasks(subtasks.filter(s => s.id !== subtask.id))}
+                        className="text-muted-foreground hover:text-destructive text-xs shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground mb-2 italic">Sin subtareas</p>
+              )}
             </div>
           )}
 
