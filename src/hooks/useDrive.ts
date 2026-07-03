@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, createContext, useContext, createElement, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { db, storage } from '@/integrations/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserFolder, UserFile, UserFileLink, EntityType } from '@/types';
@@ -46,15 +46,13 @@ function mapLink(doc: any): UserFileLink {
   };
 }
 
-// Internal hook that owns the Firestore listeners. Only DriveProvider calls
-// it: every extra caller (e.g. EntitySidebar on each open) would create 4 new
-// onSnapshot listeners and re-read all drive collections, multiplying billed reads.
-function useDriveData() {
+export function useDrive() {
   const { user } = useAuth();
   const [folders, setFolders] = useState<UserFolder[]>([]);
   const [files, setFiles] = useState<UserFile[]>([]);
   const [links, setLinks] = useState<UserFileLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const unsubscribersRef = useCallback(() => new Map<string, Unsubscribe>(), [])();
 
   // Setup real-time listeners
   useEffect(() => {
@@ -66,9 +64,6 @@ function useDriveData() {
       return;
     }
 
-    // Effect-scoped: the previous version built a new Map on every render and
-    // used it as an effect dependency, so every render tore down and recreated
-    // all listeners (a billed full re-read of every collection each time).
     const unsubscribers = new Map<string, Unsubscribe>();
 
     // Folders listener — sort in JS to avoid needing a composite index
@@ -90,10 +85,9 @@ function useDriveData() {
     unsubscribers.set('files', onSnapshot(
       query(collection(db, 'user_files'), where('userId', '==', user.uid)),
       (snapshot) => {
-        // Functional update: `files` from the closure would be stale (empty),
-        // wiping tags already applied by the tags listener.
-        setFiles(prev => snapshot.docs.map((doc) => {
-          const fileTags = prev.find(f => f.id === doc.id)?.tags || [];
+        setFiles(snapshot.docs.map((doc) => {
+          const fileId = doc.id;
+          const fileTags = files.find(f => f.id === fileId)?.tags || [];
           return mapFile({ id: doc.id, ...doc.data() }, fileTags);
         }).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
       },
@@ -137,11 +131,15 @@ function useDriveData() {
 
     setLoading(false);
 
+    // Save unsubscribers
+    unsubscribersRef.clear();
+    unsubscribers.forEach((unsub, key) => unsubscribersRef.set(key, unsub));
+
     return () => {
-      unsubscribers.forEach(unsub => unsub());
-      unsubscribers.clear();
+      unsubscribersRef.forEach(unsub => unsub());
+      unsubscribersRef.clear();
     };
-  }, [user]);
+  }, [user, unsubscribersRef]);
 
   // One-time cleanup: remove duplicate EMPTY folders (same name + same parent).
   // Auto-seeding previously created duplicates on every reload; this self-heals.
@@ -457,19 +455,4 @@ function useDriveData() {
     addFileLink,
     removeFileLink,
   };
-}
-
-type Drive = ReturnType<typeof useDriveData>;
-
-const DriveContext = createContext<Drive | null>(null);
-
-export function DriveProvider({ children }: { children: ReactNode }) {
-  const drive = useDriveData();
-  return createElement(DriveContext.Provider, { value: drive }, children);
-}
-
-export function useDrive(): Drive {
-  const drive = useContext(DriveContext);
-  if (!drive) throw new Error('useDrive must be used within a DriveProvider');
-  return drive;
 }
