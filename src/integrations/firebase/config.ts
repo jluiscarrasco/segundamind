@@ -24,8 +24,11 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 export const storage = getStorage(app);
 
+// App Check only runs in production builds: in local dev the reCAPTCHA
+// exchange 403s (and the SDK then throttles itself for 24h), and dev AI
+// calls go to the local Express server which doesn't enforce App Check.
 const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-const appCheck = recaptchaSiteKey
+const appCheck = recaptchaSiteKey && !import.meta.env.DEV
   ? initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(recaptchaSiteKey),
       isTokenAutoRefreshEnabled: true,
@@ -33,10 +36,10 @@ const appCheck = recaptchaSiteKey
   : null;
 
 // Returns a fresh App Check token to attach to outgoing API calls, or null
-// if App Check isn't configured (e.g. local dev without the site key).
+// if App Check isn't active (local dev, or missing site key).
 export async function getAppCheckHeader(): Promise<string | null> {
   if (!appCheck) {
-    console.warn('[AppCheck] Not initialized (missing VITE_RECAPTCHA_SITE_KEY)');
+    if (!import.meta.env.DEV) console.warn('[AppCheck] Not initialized (missing VITE_RECAPTCHA_SITE_KEY)');
     return null;
   }
   try {
