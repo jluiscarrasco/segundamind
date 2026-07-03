@@ -4,7 +4,7 @@ import { ChevronUp, ChevronDown, ListChecks, ArrowLeft } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
 import { STATUS_LABELS, EFFORT_OPTIONS, IMPORTANCE_LABELS } from '@/types';
 import { ImportanceDot } from './StatusBadges';
-import { getTodayKeyCET } from '@/lib/dateUtils';
+import { getTodayKeyCET, addDaysCETKey, dateToCETKey } from '@/lib/dateUtils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -63,6 +63,16 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
     return diff === 1 ? 'Ayer' : `Hace ${diff}d`;
   };
 
+  const getNextWeekday = (targetDay: number): string => {
+    const today = new Date();
+    const todayDay = today.getDay();
+    let daysAhead = targetDay - todayDay;
+    if (daysAhead <= 0) daysAhead += 7;
+    const date = new Date(today);
+    date.setDate(date.getDate() + daysAhead);
+    return dateToCETKey(date);
+  };
+
   const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
 
   const renderTaskEditor = () => {
@@ -78,23 +88,13 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
           <span className="text-sm font-medium">Volver</span>
         </button>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div className="flex-1 px-4 py-3 space-y-3 overflow-hidden">
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nombre</label>
             <Input
               value={selectedTask.name}
               onChange={(e) => onUpdateTask(selectedTask.id, { name: e.target.value })}
               className="mt-0.5 h-8 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Descripción</label>
-            <Textarea
-              value={selectedTask.description || ''}
-              onChange={(e) => onUpdateTask(selectedTask.id, { description: e.target.value })}
-              className="mt-0.5 min-h-[60px] resize-none text-sm"
-              placeholder="Descripción (opcional)"
             />
           </div>
 
@@ -126,12 +126,40 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
 
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Fecha de revisión</label>
-            <Input
-              type="date"
-              value={selectedTask.reviewDate || ''}
-              onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
-              className="mt-0.5 h-8 text-sm"
-            />
+            <div className="mt-0.5 flex gap-1">
+              <Input
+                type="date"
+                value={selectedTask.reviewDate || ''}
+                onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
+                className="h-8 text-sm flex-1"
+              />
+            </div>
+            <div className="mt-1 flex gap-1">
+              <button
+                onClick={() => onUpdateTask(selectedTask.id, { reviewDate: addDaysCETKey(1) })}
+                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                +1d
+              </button>
+              <button
+                onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(5) })}
+                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                Fri
+              </button>
+              <button
+                onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(6) })}
+                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                Sat
+              </button>
+              <button
+                onClick={() => onUpdateTask(selectedTask.id, { reviewDate: addDaysCETKey(7) })}
+                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              >
+                +7d
+              </button>
+            </div>
           </div>
 
           <div>
