@@ -201,8 +201,8 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
     none: 'border-l-muted-foreground/20',
   };
 
-  // Full workday ≈ 8h (480 min). Above that, the day is over capacity.
-  const WORKDAY_MINUTES = 480;
+  // Real daily capacity for tasks ≈ 2h (120 min). Above that, the day is over capacity.
+  const WORKDAY_MINUTES = 120;
 
   const formatWorkload = (minutes: number): string => {
     if (minutes < 60) return `${minutes}m`;
