@@ -1,5 +1,5 @@
 export type Importance = 'critical' | 'important' | 'normal' | 'low' | 'none';
-export type Status = 'funnel' | 'ready' | 'blocked' | 'active' | 'finished';
+export type Status = 'funnel' | 'ready' | 'blocked' | 'waiting' | 'active' | 'finished';
 export type EntityType = 'area' | 'project' | 'task';
 
 export type Effort = 5 | 10 | 15 | 25 | 45 | 60 | 120 | 180 | 300 | 480 | null;
@@ -115,7 +115,8 @@ export const IMPORTANCE_LABELS: Record<Importance, string> = {
 export const STATUS_LABELS: Record<Status, string> = {
   funnel: 'Embudo',
   ready: 'Listo',
-  blocked: 'Bloqueado / En Espera',
+  blocked: 'Bloqueado',
+  waiting: 'Esperando',
   active: 'En Progreso',
   finished: 'Cerrado',
 };

@@ -72,6 +72,7 @@ export default {
           funnel: "hsl(var(--status-funnel))",
           ready: "hsl(var(--status-ready))",
           blocked: "hsl(var(--status-blocked))",
+          waiting: "hsl(var(--status-waiting))",
           active: "hsl(var(--status-active))",
           finished: "hsl(var(--status-finished))",
         },

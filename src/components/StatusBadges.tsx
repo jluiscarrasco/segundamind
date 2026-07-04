@@ -54,6 +54,7 @@ export function StatusIcon({ status, className = '' }: { status: Status; classNa
     case 'funnel': return <Filter className={`${iconClass} text-status-funnel`} />;
     case 'ready': return <CircleCheck className={`${iconClass} text-status-ready`} />;
     case 'blocked': return <Lock className={`${iconClass} text-status-blocked`} />;
+    case 'waiting': return <Clock className={`${iconClass} text-status-waiting`} />;
     case 'active': return <Zap className={`${iconClass} text-status-active`} />;
     case 'finished': return <CheckCircle2 className={`${iconClass} text-status-finished`} />;
   }

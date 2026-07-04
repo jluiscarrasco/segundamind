@@ -19,6 +19,7 @@ const STATUS_MULTIPLIER: Record<Status, number> = {
   funnel: 0.5,
   ready: 1,
   blocked: 0.1,
+  waiting: 0.1,
   active: 1,
   finished: 0,
 };
@@ -70,7 +71,7 @@ export function scoreTaskDetailed(task: Task, projects: Project[], areas: Area[]
   const total = Math.round((base + urgency + cascade) * multiplier);
 
   const urgencyLabels: Record<number, string> = { 50: 'Vencida', 35: 'Hoy', 25: 'Mañana' };
-  const statusLabels: Record<string, string> = { funnel: '×0.5 embudo', ready: '×1', active: '×1', blocked: '×0.1 bloqueada' };
+  const statusLabels: Record<string, string> = { funnel: '×0.5 embudo', ready: '×1', active: '×1', blocked: '×0.1 bloqueada', waiting: '×0.1 esperando' };
 
   return {
     total, base, urgency, cascade, multiplier,

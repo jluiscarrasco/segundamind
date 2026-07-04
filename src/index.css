@@ -47,6 +47,7 @@
     --status-funnel: 260 60% 55%;
     --status-ready: 215 75% 50%;
     --status-blocked: 40 75% 48%;
+    --status-waiting: 190 65% 42%;
     --status-active: 145 60% 40%;
     --status-finished: 220 10% 55%;
 
