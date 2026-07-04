@@ -11,9 +11,7 @@ import { useCommandPalette } from '@/hooks/useCommandPalette';
 import { useContextPanel } from '@/hooks/useContextPanel';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 
-import { DashboardStats } from '@/components/DashboardStats';
-import { AreaHealthCards } from '@/components/AreaHealthCards';
-import { RecentActivity } from '@/components/RecentActivity';
+import { AhoraFocus } from '@/components/AhoraFocus';
 import { UndatedTasks } from '@/components/UndatedTasks';
 import { InboxPanel } from '@/components/InboxPanel';
 import { DetailPanel } from '@/components/DetailPanel';
@@ -402,13 +400,13 @@ const Index = () => {
               />
             ) : (
               <>
-                {/* Stat cards */}
-                <DashboardStats
+                {/* Ahora — top actionable tasks */}
+                <AhoraFocus
                   tasks={filteredTasks}
-                  inbox={store.inbox}
                   projects={filteredProjects}
                   areas={filteredAreas}
-                  onOpenInbox={() => setInboxOpen(true)}
+                  onEditEntity={handleEditEntity}
+                  onCompleteTask={(id) => store.updateTask(id, { status: 'finished' })}
                 />
 
                 {/* Tu Agenda - unified view */}
@@ -428,23 +426,14 @@ const Index = () => {
                   <UnprocessedNotes items={store.inbox} onOpenInbox={() => setInboxOpen(true)} />
                 </div>
 
-                {/* Recent activity + Undated tasks */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <RecentActivity
-                    tasks={filteredTasks}
-                    resources={store.resources}
-                    projects={filteredProjects}
-                    wikiPages={store.wikiPages}
-                    onEditEntity={handleEditEntity}
-                  />
-                  <UndatedTasks
-                    tasks={filteredTasks}
-                    projects={filteredProjects}
-                    areas={filteredAreas}
-                    onEditEntity={handleEditEntity}
-                    onSetTaskDate={(id, date) => store.updateTask(id, { reviewDate: date })}
-                  />
-                </div>
+                {/* Undated tasks */}
+                <UndatedTasks
+                  tasks={filteredTasks}
+                  projects={filteredProjects}
+                  areas={filteredAreas}
+                  onEditEntity={handleEditEntity}
+                  onSetTaskDate={(id, date) => store.updateTask(id, { reviewDate: date })}
+                />
               </>
             )}
           </div>
