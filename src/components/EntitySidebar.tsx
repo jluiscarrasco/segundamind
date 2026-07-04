@@ -30,10 +30,12 @@ interface EntitySidebarProps {
   onClose: () => void;
   onAddResource?: (resource: Omit<Resource, 'id' | 'createdAt'>) => void;
   onRemoveResource?: (id: string) => void;
+  /** Close this task (as finished) and spawn a replica in "Listo" with a new date. */
+  onCloseAndReplicate?: (data: EntityFormData, newReviewDate: string) => void;
   entityId?: string;
 }
 
-export function EntitySidebar({ type, mode, initialData, displayId, resources = [], onSubmit, onDelete, onClose, onAddResource, onRemoveResource, entityId }: EntitySidebarProps) {
+export function EntitySidebar({ type, mode, initialData, displayId, resources = [], onSubmit, onDelete, onClose, onAddResource, onRemoveResource, onCloseAndReplicate, entityId }: EntitySidebarProps) {
   const { user } = useAuth();
   const { uploadAttachment } = useDrive();
   const [name, setName] = useState(initialData?.name || '');
@@ -48,6 +50,8 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  const [showReplicate, setShowReplicate] = useState(false);
+  const [replicateDate, setReplicateDate] = useState('');
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
   const entityNotes = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'note');
@@ -188,6 +192,20 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
     });
   };
 
+  const handleReplicateConfirm = () => {
+    if (!name.trim() || !replicateDate || !onCloseAndReplicate) return;
+    onCloseAndReplicate({
+      name: name.trim(),
+      description: description.trim(),
+      importance,
+      status: 'finished',
+      reviewDate: reviewDate || null,
+      effort,
+      subtasks,
+    }, replicateDate);
+    setShowReplicate(false);
+  };
+
   return (
     <>
       <motion.div
@@ -271,12 +289,24 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Estado</label>
             <select
               value={status}
-              onChange={e => setStatus(e.target.value as Status)}
+              onChange={e => {
+                // "__close_new__" is an action, not a real status: it closes this
+                // task and opens the replicate dialog instead of setting a status.
+                if (e.target.value === '__close_new__') {
+                  setReplicateDate(reviewDate || '');
+                  setShowReplicate(true);
+                  return;
+                }
+                setStatus(e.target.value as Status);
+              }}
               className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all"
             >
               {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
+              {isEdit && type === 'task' && onCloseAndReplicate && (
+                <option value="__close_new__">↻ Cerrado y nueva…</option>
+              )}
             </select>
           </div>
 
@@ -604,6 +634,50 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
           </button>
         </div>
       </motion.aside>
+
+      {/* Close-and-replicate dialog (recurring tasks) */}
+      {showReplicate && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm"
+          onClick={() => setShowReplicate(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-xs mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-semibold text-foreground mb-1">Cerrado y nueva</h4>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Esta tarea se cerrará y se creará una copia en estado{' '}
+              <span className="font-medium text-foreground">Listo</span> con la fecha que elijas
+              (mismo título, descripción, esfuerzo y subtareas sin marcar).
+            </p>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Fecha de la nueva tarea</label>
+            <input
+              type="date"
+              value={replicateDate}
+              onChange={e => setReplicateDate(e.target.value)}
+              className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReplicate(false)}
+                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground hover:text-foreground transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleReplicateConfirm}
+                disabled={!replicateDate || !name.trim()}
+                className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-40 transition-all"
+              >
+                Cerrar y crear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

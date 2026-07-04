@@ -31,6 +31,7 @@ import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
 import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
 import { addDaysCETKey } from '@/lib/dateUtils';
+import { toast } from 'sonner';
 
 type ModalState =
   | null
@@ -159,6 +160,35 @@ const Index = () => {
     else if (modal.type === 'project') store.deleteProject(modal.id);
     else store.deleteTask(modal.id);
     setModal(null);
+  };
+
+  // Close a recurring task and spawn its next occurrence under the same project.
+  const handleCloseAndReplicate = (data: EntityFormData, newReviewDate: string) => {
+    if (!modal || modal.mode !== 'edit' || modal.type !== 'task') return;
+    const task = store.tasks.find(t => t.id === modal.id);
+    if (!task) return;
+    // Close the original as finished, persisting any edits made in the form.
+    store.updateTask(task.id, {
+      name: data.name,
+      description: data.description,
+      importance: data.importance,
+      effort: data.effort ?? null,
+      reviewDate: data.reviewDate,
+      status: 'finished',
+    });
+    // Create the next occurrence, ready to start, on the chosen date.
+    store.addTask({
+      projectId: task.projectId,
+      name: data.name,
+      description: data.description,
+      importance: data.importance,
+      effort: data.effort ?? null,
+      reviewDate: newReviewDate,
+      status: 'ready',
+      subtasks: (data.subtasks ?? []).map(s => ({ ...s, id: crypto.randomUUID(), completed: false })),
+    });
+    setModal(null);
+    toast.success(`Tarea cerrada y replicada para el ${newReviewDate}`);
   };
 
   const selectedArea = selectedAreaId ? store.areas.find(a => a.id === selectedAreaId) || null : null;
@@ -489,6 +519,7 @@ const Index = () => {
             onClose={() => setModal(null)}
             onAddResource={store.addResource}
             onRemoveResource={store.removeResource}
+            onCloseAndReplicate={modal.mode === 'edit' && modal.type === 'task' ? handleCloseAndReplicate : undefined}
           />
         )}
       </AnimatePresence>
