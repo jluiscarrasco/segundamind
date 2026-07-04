@@ -28,7 +28,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
 import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
-import { addDaysCETKey } from '@/lib/dateUtils';
+import { addDaysCETKey, getTodayKeyCET } from '@/lib/dateUtils';
+import { filterByQuickView, type QuickView } from '@/lib/quickViews';
+import { QuickTaskList } from '@/components/QuickTaskList';
 import { toast } from 'sonner';
 
 type ModalState =
@@ -48,6 +50,7 @@ const Index = () => {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [quickView, setQuickView] = useState<QuickView | null>(null);
 
   // Command Palette and Context Panel state
   const commandPalette = useCommandPalette();
@@ -57,12 +60,27 @@ const Index = () => {
   const handleSelectArea = (id: string) => {
     setSelectedAreaId(id);
     setSelectedProjectId(null);
+    setQuickView(null);
   };
 
   const handleSelectProject = (id: string) => {
     const project = store.projects.find(p => p.id === id);
     if (project) setSelectedAreaId(project.areaId);
     setSelectedProjectId(id);
+    setQuickView(null);
+  };
+
+  const handleSelectQuickView = (view: QuickView) => {
+    setQuickView(view);
+    setSelectedAreaId(null);
+    setSelectedProjectId(null);
+    setViewMode('dashboard');
+  };
+
+  // View toggles clear the active quick view so returning to Dashboard shows it.
+  const changeView = (mode: ViewMode) => {
+    setViewMode(mode);
+    setQuickView(null);
   };
 
   const handlePostpone = useCallback((type: 'area' | 'project' | 'task', id: string, days: number) => {
@@ -213,10 +231,15 @@ const Index = () => {
       <AppSidebar
         areas={store.areas}
         projects={store.projects}
+        tasks={store.tasks}
+        inboxCount={store.inbox.length}
         selectedAreaId={selectedAreaId}
         selectedProjectId={selectedProjectId}
+        activeQuickView={quickView}
         onSelectArea={handleSelectArea}
         onSelectProject={handleSelectProject}
+        onSelectQuickView={handleSelectQuickView}
+        onOpenInbox={() => setInboxOpen(true)}
         onAddArea={() => setModal({ mode: 'create', type: 'area' })}
         onAddProject={(areaId) => setModal({ mode: 'create', type: 'project', areaId })}
       />
@@ -226,8 +249,8 @@ const Index = () => {
         <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-3 flex items-center gap-3">
           {/* Breadcrumb */}
           <button
-            onClick={() => { setSelectedAreaId(null); setSelectedProjectId(null); setViewMode('dashboard'); }}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${showDashboard && viewMode === 'dashboard' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => { setSelectedAreaId(null); setSelectedProjectId(null); setViewMode('dashboard'); setQuickView(null); }}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${showDashboard && viewMode === 'dashboard' && !quickView ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <LayoutDashboard className="w-4 h-4" />
             Dashboard
@@ -262,7 +285,7 @@ const Index = () => {
           {/* View mode toggle */}
           <div className="ml-auto flex items-center gap-1 bg-secondary rounded-lg p-0.5">
             <button
-              onClick={() => setViewMode('dashboard')}
+              onClick={() => changeView('dashboard')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'dashboard'
                   ? 'bg-card text-foreground shadow-sm'
@@ -273,7 +296,7 @@ const Index = () => {
               Dashboard
             </button>
             <button
-              onClick={() => setViewMode('kanban')}
+              onClick={() => changeView('kanban')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'kanban'
                   ? 'bg-card text-foreground shadow-sm'
@@ -284,7 +307,7 @@ const Index = () => {
               Board
             </button>
             <button
-              onClick={() => setViewMode('calendar')}
+              onClick={() => changeView('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'calendar'
                   ? 'bg-card text-foreground shadow-sm'
@@ -295,7 +318,7 @@ const Index = () => {
               Calendario
             </button>
             <button
-              onClick={() => setViewMode('backlog')}
+              onClick={() => changeView('backlog')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'backlog'
                   ? 'bg-card text-foreground shadow-sm'
@@ -306,7 +329,7 @@ const Index = () => {
               Backlog
             </button>
             <button
-              onClick={() => setViewMode('knowledge')}
+              onClick={() => changeView('knowledge')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'knowledge'
                   ? 'bg-card text-foreground shadow-sm'
@@ -317,7 +340,7 @@ const Index = () => {
               Conocimiento
             </button>
             <button
-              onClick={() => setViewMode('files')}
+              onClick={() => changeView('files')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'files'
                   ? 'bg-card text-foreground shadow-sm'
@@ -397,6 +420,16 @@ const Index = () => {
                 onAddWikiPage={store.addWikiPage}
                 onUpdateWikiPage={store.updateWikiPage}
                 onDeleteWikiPage={store.deleteWikiPage}
+              />
+            ) : quickView ? (
+              <QuickTaskList
+                view={quickView}
+                tasks={filterByQuickView(quickView, store.tasks, getTodayKeyCET())}
+                projects={store.projects}
+                areas={store.areas}
+                onEditEntity={handleEditEntity}
+                onPostpone={handlePostpone}
+                onCompleteTask={(id) => store.updateTask(id, { status: 'finished' })}
               />
             ) : (
               <>

@@ -13,11 +13,19 @@ import {
   Bell,
   BellOff,
   Brain,
+  Zap,
+  AlertTriangle,
+  Clock,
+  CalendarOff,
+  Inbox,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Area, Project } from "@/types";
+import type { Area, Project, Task } from "@/types";
 import { ImportanceDot, StatusIcon } from "./StatusBadges";
+import { computeAreaHealth } from "@/lib/scoring";
+import { getTodayKeyCET } from "@/lib/dateUtils";
+import { filterByQuickView, QUICK_VIEW_LABELS, type QuickView } from "@/lib/quickViews";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { McpAccessDialog } from "./McpAccessDialog";
 import { Plug } from "lucide-react";
@@ -26,13 +34,25 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 interface AppSidebarProps {
   areas: Area[];
   projects: Project[];
+  tasks: Task[];
+  inboxCount: number;
   selectedAreaId: string | null;
   selectedProjectId: string | null;
+  activeQuickView: QuickView | null;
   onSelectArea: (id: string) => void;
   onSelectProject: (id: string) => void;
+  onSelectQuickView: (view: QuickView) => void;
+  onOpenInbox: () => void;
   onAddArea: () => void;
   onAddProject: (areaId: string) => void;
 }
+
+const QUICK_VIEW_META: { key: QuickView; Icon: typeof Zap; accent: string }[] = [
+  { key: 'today', Icon: Zap, accent: 'text-primary' },
+  { key: 'overdue', Icon: AlertTriangle, accent: 'text-destructive' },
+  { key: 'waiting', Icon: Clock, accent: 'text-status-waiting' },
+  { key: 'undated', Icon: CalendarOff, accent: 'text-muted-foreground' },
+];
 
 function SignOutButton() {
   const { user, signOut } = useAuth();
@@ -66,15 +86,21 @@ function PushNotificationToggle() {
 export function AppSidebar({
   areas,
   projects,
+  tasks,
+  inboxCount,
   selectedAreaId,
   selectedProjectId,
+  activeQuickView,
   onSelectArea,
   onSelectProject,
+  onSelectQuickView,
+  onOpenInbox,
   onAddArea,
   onAddProject,
 }: AppSidebarProps) {
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(areas.map((a) => a.id)));
   const [showSettings, setShowSettings] = useState(false);
+  const todayKey = getTodayKeyCET();
 
   const toggleArea = (id: string) => {
     setExpandedAreas((prev) => {
@@ -98,6 +124,46 @@ export function AppSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-3">
+        {/* Quick views */}
+        <div className="space-y-0.5">
+          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1">⚡ Vistas rápidas</h2>
+          {QUICK_VIEW_META.map(({ key, Icon, accent }) => {
+            const count = filterByQuickView(key, tasks, todayKey).length;
+            const active = activeQuickView === key;
+            return (
+              <button
+                key={key}
+                onClick={() => onSelectQuickView(key)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all ${
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${accent}`} />
+                <span className="flex-1 text-left">{QUICK_VIEW_LABELS[key]}</span>
+                {count > 0 && (
+                  <span className="text-[10px] font-semibold text-muted-foreground bg-sidebar-accent/60 px-1.5 rounded-full tabular-nums">
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            onClick={onOpenInbox}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+          >
+            <Inbox className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 text-left">Bandeja</span>
+            {inboxCount > 0 && (
+              <span className="text-[10px] font-semibold text-primary bg-primary/15 px-1.5 rounded-full tabular-nums">
+                {inboxCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Areas */}
         <div className="space-y-1">
           <div className="flex items-center justify-between px-2 py-1">
@@ -117,6 +183,12 @@ export function AppSidebar({
             const isExpanded = expandedAreas.has(area.id);
             const isSelected = selectedAreaId === area.id && !selectedProjectId;
             const isBlocked = area.status === "blocked";
+            const areaProjectIds = new Set(areaProjects.map((p) => p.id));
+            const areaTasks = tasks.filter((t) => areaProjectIds.has(t.projectId));
+            const health = computeAreaHealth(area, areaProjects, areaTasks);
+            const openCount = areaTasks.filter((t) => t.status !== "finished").length;
+            const healthColor =
+              health.level === "healthy" ? "bg-status-active" : health.level === "warning" ? "bg-status-blocked" : "bg-destructive";
 
             return (
               <div key={area.id}>
@@ -142,6 +214,13 @@ export function AppSidebar({
                   <ImportanceDot importance={area.importance} />
                   {isBlocked && <Lock className="w-3 h-3 text-status-blocked" />}
                   <span className="truncate flex-1 text-left">{area.name}</span>
+                  {openCount > 0 && (
+                    <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{openCount}</span>
+                  )}
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${healthColor}`}
+                    title={`Salud del área: ${health.score}/100`}
+                  />
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
