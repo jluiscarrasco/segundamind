@@ -179,7 +179,6 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
             })()}
           </div>
         ) : (
-          /* Fallback for non-tasks: show postpone buttons */
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
               onClick={(e) => {
