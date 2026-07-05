@@ -5,6 +5,7 @@ import type { Task, Project, Area, Importance, EntityType, Resource } from '@/ty
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
+import { QuickTaskEdit } from './QuickTaskEdit';
 
 const IMPORTANCE_ORDER: Importance[] = ['critical', 'important', 'normal', 'low', 'none'];
 
@@ -27,9 +28,10 @@ interface TuAgendaProps {
   resources: Resource[];
   onEditEntity: (type: EntityType, id: string) => void;
   onPostpone: (type: 'area' | 'project' | 'task', id: string, days: number) => void;
+  onQuickEdit?: (id: string, field: keyof Task, value: any) => void;
 }
 
-export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone }: TuAgendaProps) {
+export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit }: TuAgendaProps) {
   const todayKey = getTodayKeyCET();
   const limitKey = addDaysCETKey(7);
 
@@ -157,26 +159,48 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : isToday ? 'text-primary' : 'text-muted-foreground'}`}>
           {formatDate(item.reviewDate)}
         </span>
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPostpone(item.type, item.id, 1);
-            }}
-            className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
+        {/* Inline edits for tasks only */}
+        {item.type === 'task' && onQuickEdit ? (
+          <div
+            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={(e) => e.stopPropagation()}
           >
-            +1d
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPostpone(item.type, item.id, 7);
-            }}
-            className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
-          >
-            +7d
-          </button>
-        </div>
+            {(() => {
+              const task = tasks.find(t => t.id === item.id);
+              return task ? (
+                <QuickTaskEdit
+                  task={task}
+                  projects={projects}
+                  areas={areas}
+                  onUpdate={(field, value) => onQuickEdit(task.id, field, value)}
+                  layout="hover"
+                />
+              ) : null;
+            })()}
+          </div>
+        ) : (
+          /* Fallback for non-tasks: show postpone buttons */
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPostpone(item.type, item.id, 1);
+              }}
+              className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
+            >
+              +1d
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPostpone(item.type, item.id, 7);
+              }}
+              className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
+            >
+              +7d
+            </button>
+          </div>
+        )}
       </motion.div>
     );
   };

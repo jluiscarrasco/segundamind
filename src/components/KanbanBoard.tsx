@@ -5,6 +5,7 @@ import type { Task, Project, Area, Resource, Status, EntityType } from '@/types'
 import { ImportanceBadge, StatusIcon } from './StatusBadges';
 import { STATUS_LABELS, getTaskDisplayId } from '@/types';
 import { scoreTask } from '@/lib/scoring';
+import { QuickTaskEdit } from './QuickTaskEdit';
 
 const KANBAN_COLUMNS: { status: Status; label: string; color: string; dotColor: string }[] = [
   { status: 'funnel', label: 'Embudo', color: 'bg-status-funnel/10 border-status-funnel/30', dotColor: 'bg-status-funnel' },
@@ -24,9 +25,10 @@ interface KanbanBoardProps {
   onUpdateTask: (id: string, patch: Partial<Task>) => void;
   onAddTask: (projectId: string) => void;
   selectedProjectId: string | null;
+  onQuickEdit?: (id: string, field: keyof Task, value: any) => void;
 }
 
-export function KanbanBoard({ tasks, projects, areas, resources, onEditEntity, onUpdateTask, onAddTask, selectedProjectId }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, projects, areas, resources, onEditEntity, onUpdateTask, onAddTask, selectedProjectId, onQuickEdit }: KanbanBoardProps) {
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score');
 
   const filteredTasks = selectedProjectId
@@ -202,6 +204,22 @@ export function KanbanBoard({ tasks, projects, areas, resources, onEditEntity, o
                         </div>
                       )}
                     </div>
+
+                    {/* Inline quick edits */}
+                    {onQuickEdit && (
+                      <div
+                        className="mt-2 pt-2 border-t border-border/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <QuickTaskEdit
+                          task={task}
+                          projects={projects}
+                          areas={areas}
+                          onUpdate={(field, value) => onQuickEdit(task.id, field, value)}
+                          layout="row"
+                        />
+                      </div>
+                    )}
 
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-50 transition-opacity">
                       <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />

@@ -377,6 +377,7 @@ const Index = () => {
               onUpdateTask={store.updateTask}
               onAddTask={(projectId) => setModal({ mode: 'create', type: 'task', projectId })}
               selectedProjectId={selectedProjectId}
+              onQuickEdit={handleQuickEditTask}
             />
           </div>
         ) : viewMode === 'backlog' ? (
@@ -450,7 +451,7 @@ const Index = () => {
 
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
-                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} />
+                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} />
                   <CalendarView
                     tasks={filteredTasks}
                     projects={filteredProjects}
