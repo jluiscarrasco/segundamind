@@ -8,7 +8,6 @@ import {
   collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
   onSnapshot, orderBy, writeBatch, increment, Unsubscribe,
 } from 'firebase/firestore';
-import { trackedOnSnapshot } from '@/lib/listener-tracker'; // TEMP diagnostic
 
 interface StoreData {
   areas: Area[];
@@ -66,7 +65,7 @@ export function useStore() {
 
     async function setupListeners() {
       try {
-        unsubscribers.set('areas', trackedOnSnapshot(
+        unsubscribers.set('areas', onSnapshot(
           query(collection(db, 'areas'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
@@ -75,7 +74,7 @@ export function useStore() {
           }
         ));
 
-        unsubscribers.set('projects', trackedOnSnapshot(
+        unsubscribers.set('projects', onSnapshot(
           query(collection(db, 'projects'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
@@ -84,7 +83,7 @@ export function useStore() {
           }
         ));
 
-        unsubscribers.set('tasks', trackedOnSnapshot(
+        unsubscribers.set('tasks', onSnapshot(
           query(collection(db, 'tasks'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
@@ -93,7 +92,7 @@ export function useStore() {
           }
         ));
 
-        unsubscribers.set('inbox_items', trackedOnSnapshot(
+        unsubscribers.set('inbox_items', onSnapshot(
           query(collection(db, 'inbox_items'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
@@ -102,7 +101,7 @@ export function useStore() {
           }
         ));
 
-        unsubscribers.set('resources', trackedOnSnapshot(
+        unsubscribers.set('resources', onSnapshot(
           query(collection(db, 'resources'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
@@ -111,7 +110,7 @@ export function useStore() {
           }
         ));
 
-        unsubscribers.set('wiki_pages', trackedOnSnapshot(
+        unsubscribers.set('wiki_pages', onSnapshot(
           query(collection(db, 'wiki_pages'), where('userId', '==', user.uid)),
           (snapshot) => {
             if (!cancelled) {
