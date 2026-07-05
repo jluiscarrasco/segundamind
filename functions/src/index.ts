@@ -117,8 +117,12 @@ function sendError(res: express.Response, error: any) {
   res.status(400).json({ error: error.message });
 }
 
-// Helper: call LLM API (Groq - Llama 3.3)
-async function callAI(prompt: string, systemPrompt?: string) {
+// Helper: call LLM API (Groq - Llama 3.3).
+// jsonMode forces the model to emit a valid JSON object (Groq/OpenAI
+// response_format) and lowers the temperature — use it for every endpoint that
+// feeds parseJsonResponse, otherwise the model occasionally returns malformed
+// JSON (unescaped quotes, stray prose) and parsing fails.
+async function callAI(prompt: string, systemPrompt?: string, jsonMode = false) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('LLM API key not configured');
 
@@ -130,8 +134,9 @@ async function callAI(prompt: string, systemPrompt?: string) {
         ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature: jsonMode ? 0.2 : 0.7,
       max_tokens: 1024,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
     },
     {
       headers: { Authorization: `Bearer ${apiKey}` }
@@ -464,7 +469,7 @@ Respond with JSON: {
   "reasoning": "..."
 }`;
 
-    const response = await callAI(prompt);
+    const response = await callAI(prompt, undefined, true);
     const classification = parseJsonResponse(response);
 
     // Map project name to ID
@@ -705,7 +710,7 @@ Responde con JSON: {
   "suggestedCategory": "investigar" | "probar" | "inspiracion" | "referencia"
 }`;
 
-    const aiResponse = await callAI(prompt);
+    const aiResponse = await callAI(prompt, undefined, true);
     const result = parseJsonResponse(aiResponse);
 
     if (scrapedContent.imageUrl) {
@@ -804,7 +809,7 @@ Responde con JSON: {
   "suggestedCategory": "investigar" | "probar" | "inspiracion" | "referencia" | "otro"
 }`;
 
-    const aiResponse = await callAI(prompt);
+    const aiResponse = await callAI(prompt, undefined, true);
     const result = parseJsonResponse(aiResponse);
 
     if (scrapedContent.imageUrl) {
@@ -925,7 +930,7 @@ Respond with JSON: {
   "suggestedReviewDate": null
 }`;
 
-        const response = await callAI(prompt);
+        const response = await callAI(prompt, undefined, true);
         result = parseJsonResponse(response);
       }
     } catch (aiError: any) {
@@ -991,7 +996,7 @@ Respond with JSON: {
   ]
 }`;
 
-    const response = await callAI(prompt);
+    const response = await callAI(prompt, undefined, true);
     const result = parseJsonResponse(response);
 
     res.json(result);

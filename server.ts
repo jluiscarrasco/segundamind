@@ -19,8 +19,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Helper: call LLM API (Groq - Llama 3.3)
-async function callAI(prompt: string, systemPrompt?: string) {
+// Helper: call LLM API (Groq - Llama 3.3).
+// jsonMode forces valid JSON output (Groq response_format) + lower temperature;
+// use it for endpoints that feed parseJsonResponse.
+async function callAI(prompt: string, systemPrompt?: string, jsonMode = false) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('LLM API key not configured');
 
@@ -32,8 +34,9 @@ async function callAI(prompt: string, systemPrompt?: string) {
         ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
         { role: 'user', content: prompt }
       ],
-      temperature: 0.7,
+      temperature: jsonMode ? 0.2 : 0.7,
       max_tokens: 2048,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
     },
     {
       headers: { Authorization: `Bearer ${apiKey}` }
@@ -98,7 +101,7 @@ Respond with JSON: {
 
     let classification;
     try {
-      const response = await callAI(prompt);
+      const response = await callAI(prompt, undefined, true);
       classification = parseJsonResponse(response);
     } catch (geminiError: any) {
       console.error('Gemini API error:', geminiError.message);
@@ -228,7 +231,7 @@ Respond with JSON: {
   "suggestedReviewDate": null
 }`;
 
-        const response = await callAI(prompt);
+        const response = await callAI(prompt, undefined, true);
         result = parseJsonResponse(response);
       }
     } catch (aiError: any) {
@@ -518,7 +521,7 @@ Responde con JSON: {
   "suggestedCategory": "investigar" | "probar" | "inspiracion" | "referencia"
 }`;
 
-    const aiResponse = await callAI(prompt);
+    const aiResponse = await callAI(prompt, undefined, true);
     const result = parseJsonResponse(aiResponse);
 
     if (scrapedContent.imageUrl) {
@@ -616,7 +619,7 @@ Responde con JSON: {
   "suggestedCategory": "investigar" | "probar" | "inspiracion" | "referencia" | "otro"
 }`;
 
-    const aiResponse = await callAI(prompt);
+    const aiResponse = await callAI(prompt, undefined, true);
     const result = parseJsonResponse(aiResponse);
 
     // Ensure result has the image if we found one
