@@ -172,7 +172,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         </span>
         {item.type === 'task' && onQuickEdit ? (
           <div
-            className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -183,13 +183,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                   projects={projects}
                   areas={areas}
                   onUpdate={(field, value) => onQuickEdit(task.id, field, value)}
-                  layout="hover"
+                  layout="row"
                 />
               ) : null;
             })()}
           </div>
         ) : (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={(e) => {
                 e.stopPropagation();
