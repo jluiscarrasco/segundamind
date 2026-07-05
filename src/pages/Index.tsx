@@ -435,6 +435,7 @@ const Index = () => {
                 onEditEntity={handleEditEntity}
                 onPostpone={handlePostpone}
                 onCompleteTask={(id) => store.updateTask(id, { status: 'finished' })}
+                onQuickEdit={handleQuickEditTask}
               />
             ) : (
               <>

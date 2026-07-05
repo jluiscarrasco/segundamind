@@ -6,6 +6,7 @@ import { scoreTaskDetailed } from '@/lib/scoring';
 import { getTodayKeyCET } from '@/lib/dateUtils';
 import type { QuickView } from '@/lib/quickViews';
 import { QUICK_VIEW_LABELS } from '@/lib/quickViews';
+import { QuickTaskEdit } from './QuickTaskEdit';
 
 const VIEW_META: Record<QuickView, { Icon: typeof Zap; accent: string }> = {
   today: { Icon: Zap, accent: 'text-primary' },
@@ -22,9 +23,10 @@ interface QuickTaskListProps {
   onEditEntity: (type: EntityType, id: string) => void;
   onPostpone: (type: 'task', id: string, days: number) => void;
   onCompleteTask: (id: string) => void;
+  onQuickEdit?: (id: string, field: keyof Task, value: any) => void;
 }
 
-export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPostpone, onCompleteTask }: QuickTaskListProps) {
+export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPostpone, onCompleteTask, onQuickEdit }: QuickTaskListProps) {
   const { Icon, accent } = VIEW_META[view];
   const todayKey = getTodayKeyCET();
 
@@ -87,19 +89,17 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
                 <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {formatDate(t.reviewDate)}
                 </span>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onPostpone('task', t.id, 1); }}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
-                  >
-                    +1d
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onPostpone('task', t.id, 7); }}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
-                  >
-                    +7d
-                  </button>
+                <div
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <QuickTaskEdit
+                    task={t}
+                    projects={projects}
+                    areas={areas}
+                    onUpdate={(field, value) => onQuickEdit?.(t.id, field, value)}
+                    layout="hover"
+                  />
                 </div>
               </div>
             );
