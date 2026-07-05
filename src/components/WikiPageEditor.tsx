@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Plus, Trash2, ChevronRight, ChevronDown, FileText, Eye, Edit3, BookOpen, Sparkles, Loader2, Lightbulb } from 'lucide-react';
@@ -113,6 +113,10 @@ export function WikiPageEditor({ pages, entityType, entityId, entityName, onAdd,
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const titleDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Local content state for responsive editing + debounce for saves
+  const [localContent, setLocalContent] = useState('');
+  const contentDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   // AI edit state
   const [aiInstruction, setAiInstruction] = useState('');
   const [aiEditing, setAiEditing] = useState(false);
@@ -124,6 +128,11 @@ export function WikiPageEditor({ pages, entityType, entityId, entityName, onAdd,
 
   const tree = useMemo(() => buildTree(entityPages), [entityPages]);
   const selectedPage = selectedId ? entityPages.find(p => p.id === selectedId) : null;
+
+  // Sync local content when selectedPage changes
+  if (selectedPage && localContent !== selectedPage.content) {
+    setLocalContent(selectedPage.content || '');
+  }
 
   const handleToggle = (id: string) => {
     setExpandedIds(prev => {
@@ -443,8 +452,19 @@ export function WikiPageEditor({ pages, entityType, entityId, entityName, onAdd,
               </div>
             ) : (
               <textarea
-                value={selectedPage.content}
-                onChange={(e) => onUpdate(selectedPage.id, { content: e.target.value })}
+                value={localContent}
+                onChange={(e) => {
+                  const newContent = e.target.value;
+                  setLocalContent(newContent);
+
+                  // Debounce saves — 500ms after user stops typing
+                  clearTimeout(contentDebounceRef.current);
+                  contentDebounceRef.current = setTimeout(() => {
+                    if (selectedPage) {
+                      onUpdate(selectedPage.id, { content: newContent });
+                    }
+                  }, 500);
+                }}
                 className="w-full min-h-[300px] bg-secondary/20 rounded-lg p-4 text-sm text-foreground resize-y outline-none border border-border focus:border-primary/50 transition-colors font-mono"
                 placeholder="Escribe en Markdown..."
               />
