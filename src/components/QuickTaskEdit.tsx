@@ -19,7 +19,7 @@ export function QuickTaskEdit({ task, projects, areas, onUpdate, layout = 'hover
   const importanceOptions = Object.entries(IMPORTANCE_LABELS) as [Importance, string][];
 
   return (
-    <div className={`flex items-center gap-2 ${layout === 'hover' ? 'group' : ''}`}>
+    <div className="flex items-center gap-2">
       {/* Status Dropdown */}
       <div className={`relative ${layout === 'hover' ? 'opacity-0 group-hover:opacity-100' : ''} transition-opacity`}>
         <select

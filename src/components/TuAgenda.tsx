@@ -221,34 +221,33 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* VENCIDAS */}
+    <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+      {/* PARA HOY (incluyendo Vencidas) */}
       <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-destructive/8 border-b border-destructive/10">
-          <h3 className="text-[11px] font-semibold text-destructive uppercase tracking-wide flex items-center gap-1">
-            {overdue.length > 0 && <AlertTriangle className="w-3 h-3" />}
-            Vencidas ({overdue.length})
-          </h3>
+        <div className="px-4 py-3 bg-primary/8 border-b border-primary/10 flex items-center justify-between">
+          <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Por Hacer</h3>
+          <span className="text-[10px] text-muted-foreground">
+            {overdue.length > 0 && <span className="text-destructive font-semibold">{overdue.length} vencidas</span>}
+            {overdue.length > 0 && today.length > 0 && <span className="text-muted-foreground"> + </span>}
+            {today.length > 0 && <span className="text-primary font-semibold">{today.length} hoy</span>}
+          </span>
         </div>
         <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {overdue.length === 0 ? (
+          {overdue.length === 0 && today.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
           ) : (
-            overdue.map((item, i) => renderItem(item, i, 'overdue'))
-          )}
-        </div>
-      </div>
-
-      {/* PARA HOY */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-primary/8 border-b border-primary/10">
-          <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Para Hoy ({today.length})</h3>
-        </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {today.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
-          ) : (
-            today.map((item, i) => renderItem(item, i, 'today'))
+            <>
+              {overdue.length > 0 && (
+                <>
+                  {overdue.map((item, i) => renderItem(item, i, 'overdue'))}
+                </>
+              )}
+              {today.length > 0 && (
+                <>
+                  {today.map((item, i) => renderItem(item, i, 'today'))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
