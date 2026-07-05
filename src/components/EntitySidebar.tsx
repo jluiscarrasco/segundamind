@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Paperclip, FileIcon, Download, Sparkles } from 'lucide-react';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDrive } from '@/hooks/useDrive';
 import { cloudFunctions } from '@/lib/cloud-functions';
 import { toast } from 'sonner';
 
@@ -37,7 +36,6 @@ interface EntitySidebarProps {
 
 export function EntitySidebar({ type, mode, initialData, displayId, resources = [], onSubmit, onDelete, onClose, onAddResource, onRemoveResource, onCloseAndReplicate, entityId }: EntitySidebarProps) {
   const { user } = useAuth();
-  const { uploadAttachment } = useDrive();
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [importance, setImportance] = useState<Importance>(initialData?.importance || 'normal');
@@ -55,7 +53,6 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
   const entityNotes = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'note');
-  const entityFiles = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'file');
 
   const handleAddUrl = () => {
     if (!newUrl.trim() || !entityId || !onAddResource) return;
@@ -133,39 +130,6 @@ Responde SOLO con un JSON array, sin texto adicional:
       setGeneratingAI(false);
     }
   };
-
-const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
-  const attachFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !entityId || !onAddResource || !user) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('El archivo no puede superar 10MB');
-      return;
-    }
-    setIsUploadingAttachment(true);
-    try {
-      const downloadUrl = await uploadAttachment(file, entityId);
-      onAddResource({
-        entityType: type,
-        entityId,
-        type: 'file',
-        content: downloadUrl,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-      });
-      toast.success(`"${file.name}" adjuntado`);
-    } catch (err: any) {
-      console.error('File attach error:', err);
-      toast.error(err.message || 'Error al subir archivo');
-    } finally {
-      setIsUploadingAttachment(false);
-      if (attachFileInputRef.current) attachFileInputRef.current.value = '';
-    }
-  };
-
 
   useEffect(() => {
     setName(initialData?.name || '');
@@ -550,74 +514,6 @@ const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
                     Añadir
                   </button>
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Files section */}
-          {mode === 'edit' && entityId && onAddResource && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Paperclip className="w-3 h-3" /> Ficheros adjuntos
-                </label>
-                <button
-                  type="button"
-                  onClick={() => attachFileInputRef.current?.click()}
-                  disabled={isUploadingAttachment}
-                  className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
-                >
-                  {isUploadingAttachment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />} Subir
-                </button>
-              </div>
-
-              <input
-                ref={attachFileInputRef}
-                type="file"
-                onChange={handleFileAttach}
-                className="hidden"
-              />
-
-              {entityFiles.length > 0 && (
-                <div className="space-y-1.5 mb-2">
-                  {entityFiles.map(r => (
-                    <div key={r.id} className="flex items-center gap-2 bg-secondary/50 rounded-md px-2.5 py-1.5 group">
-                      <FileIcon className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-foreground truncate">{r.fileName || 'Archivo'}</p>
-                        {r.fileSize && (
-                          <span className="text-[9px] text-muted-foreground">
-                            {r.fileSize < 1024 * 1024
-                              ? `${(r.fileSize / 1024).toFixed(0)} KB`
-                              : `${(r.fileSize / (1024 * 1024)).toFixed(1)} MB`}
-                          </span>
-                        )}
-                      </div>
-                      <a
-                        href={r.content}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-0.5 rounded hover:bg-secondary text-primary opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <Download className="w-3 h-3" />
-                      </a>
-                      {onRemoveResource && (
-                        <button
-                          type="button"
-                          onClick={() => onRemoveResource(r.id)}
-                          className="p-0.5 rounded hover:bg-secondary text-destructive opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {entityFiles.length === 0 && (
-                <p className="text-[11px] text-muted-foreground mb-2">Sin ficheros adjuntos.</p>
               )}
             </div>
           )}

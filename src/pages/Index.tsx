@@ -94,6 +94,11 @@ const Index = () => {
     setModal({ mode: 'edit', type, id });
   }, []);
 
+  // Quick inline edit handler (for status, importance, date, effort - Phase 2)
+  const handleQuickEditTask = useCallback((taskId: string, field: keyof typeof store.tasks[0], value: any) => {
+    store.updateTask(taskId, { [field]: value });
+  }, [store]);
+
   // Keyboard shortcuts
   useKeyboardShortcut('CommandPalette', () => {
     commandPalette.toggle();

@@ -9,6 +9,7 @@ import {
 import {
   ref, uploadBytes, deleteObject, getBytes, getDownloadURL, listAll,
 } from 'firebase/storage';
+import { trackedOnSnapshot } from '@/lib/listener-tracker'; // TEMP diagnostic
 
 const BUCKET = 'attachments';
 
@@ -66,7 +67,7 @@ export function useDrive() {
     const unsubscribers = new Map<string, Unsubscribe>();
 
     // Folders listener — sort in JS to avoid needing a composite index
-    unsubscribers.set('folders', onSnapshot(
+    unsubscribers.set('folders', trackedOnSnapshot(
       query(collection(db, 'user_folders'), where('userId', '==', user.uid)),
       (snapshot) => {
         setFolders(
@@ -81,7 +82,7 @@ export function useDrive() {
     ));
 
     // Files listener — sort in JS to avoid needing a composite index
-    unsubscribers.set('files', onSnapshot(
+    unsubscribers.set('files', trackedOnSnapshot(
       query(collection(db, 'user_files'), where('userId', '==', user.uid)),
       (snapshot) => {
         setFiles(snapshot.docs.map((doc) => {
@@ -96,7 +97,7 @@ export function useDrive() {
     ));
 
     // Tags listener (build tag map on demand)
-    unsubscribers.set('tags', onSnapshot(
+    unsubscribers.set('tags', trackedOnSnapshot(
       query(collection(db, 'user_file_tags'), where('userId', '==', user.uid)),
       (snapshot) => {
         const tagsByFile = new Map<string, string[]>();
@@ -118,7 +119,7 @@ export function useDrive() {
     ));
 
     // Links listener
-    unsubscribers.set('links', onSnapshot(
+    unsubscribers.set('links', trackedOnSnapshot(
       query(collection(db, 'user_file_links'), where('userId', '==', user.uid)),
       (snapshot) => {
         setLinks(snapshot.docs.map((doc) => mapLink({ id: doc.id, ...doc.data() })));
