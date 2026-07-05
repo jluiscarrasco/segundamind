@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
+import { getTaskDisplayId } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
@@ -145,21 +146,30 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         onClick={() => onEditEntity(item.type, item.id)}
         className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors group ${getRowBgColor(item, section)}`}
       >
-        <ImportanceDot importance={item.importance} size="sm" />
-        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground shrink-0">
-          {typeLabels[item.type]}
-        </span>
-        <span className="text-sm font-semibold text-foreground truncate flex-1">{item.name}</span>
-        <span className="text-[11px] text-muted-foreground truncate max-w-[100px] hidden sm:block">{item.parentInfo}</span>
-        {item.status !== 'active' && item.status !== 'ready' && (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-            {item.status === 'blocked' ? '🔒' : item.status === 'funnel' ? '⏳' : '?'}
-          </span>
+        {item.type === 'task' && (
+          <>
+            <span className="text-[10px] font-mono font-semibold text-primary bg-primary/10 px-2 py-1 rounded shrink-0">
+              {(() => {
+                const task = tasks.find(t => t.id === item.id);
+                return task ? getTaskDisplayId(projects, task) : '?-?';
+              })()}
+            </span>
+            {item.score !== undefined && (
+              <span className={`text-[10px] font-bold px-2 py-1 rounded shrink-0 ${
+                item.score >= 100 ? 'bg-destructive/15 text-destructive' :
+                item.score >= 60 ? 'bg-orange-500/15 text-orange-600' :
+                item.score >= 30 ? 'bg-primary/10 text-primary' :
+                'bg-muted text-muted-foreground'
+              }`}>
+                {item.score}pts
+              </span>
+            )}
+          </>
         )}
+        <span className="text-sm font-semibold text-foreground flex-1">{item.name}</span>
         <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : isToday ? 'text-primary' : 'text-muted-foreground'}`}>
           {formatDate(item.reviewDate)}
         </span>
-        {/* Inline edits for tasks only */}
         {item.type === 'task' && onQuickEdit ? (
           <div
             className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
