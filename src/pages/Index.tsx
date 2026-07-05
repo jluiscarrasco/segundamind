@@ -440,15 +440,6 @@ const Index = () => {
               />
             ) : (
               <>
-                {/* Ahora — top actionable tasks */}
-                <AhoraFocus
-                  tasks={filteredTasks}
-                  projects={filteredProjects}
-                  areas={filteredAreas}
-                  onEditEntity={handleEditEntity}
-                  onCompleteTask={(id) => store.updateTask(id, { status: 'finished' })}
-                />
-
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
                   <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} />
