@@ -220,49 +220,35 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
-      {/* PARA HOY (incluyendo Vencidas) */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-primary/8 border-b border-primary/10 flex items-center justify-between">
-          <h3 className="text-[11px] font-semibold text-primary uppercase tracking-wide">Por Hacer</h3>
-          <span className="text-[10px] text-muted-foreground">
-            {overdue.length > 0 && <span className="text-destructive font-semibold">{overdue.length} vencidas</span>}
-            {overdue.length > 0 && today.length > 0 && <span className="text-muted-foreground"> + </span>}
-            {today.length > 0 && <span className="text-primary font-semibold">{today.length} hoy</span>}
-          </span>
-        </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {overdue.length === 0 && today.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin tareas por hacer</div>
-          ) : (
-            <>
-              {overdue.length > 0 && (
-                <>
-                  {overdue.map((item, i) => renderItem(item, i, 'overdue'))}
-                </>
-              )}
-              {today.length > 0 && (
-                <>
-                  {today.map((item, i) => renderItem(item, i, 'today'))}
-                </>
-              )}
-            </>
-          )}
-        </div>
+    <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
+      <div className="px-5 py-4 bg-primary/8 border-b border-primary/10 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-primary">Tu Agenda</h2>
+        <span className="text-xs text-muted-foreground">
+          {total > 0 && <span>{total} tareas</span>}
+        </span>
       </div>
-
-      {/* PRÓXIMOS 7 DÍAS */}
-      <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
-        <div className="px-4 py-3 bg-secondary/50 border-b border-border">
-          <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Próximos 7d ({upcoming.length})</h3>
-        </div>
-        <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
-          {upcoming.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin tareas</div>
-          ) : (
-            upcoming.map((item, i) => renderItem(item, i, 'upcoming'))
-          )}
-        </div>
+      <div className="divide-y divide-border overflow-y-auto flex-1">
+        {total === 0 ? (
+          <div className="px-5 py-12 text-center text-sm text-muted-foreground">No hay nada urgente. ¡Buen trabajo! 🎉</div>
+        ) : (
+          <>
+            {overdue.length > 0 && (
+              <>
+                {overdue.map((item, i) => renderItem(item, i, 'overdue'))}
+              </>
+            )}
+            {today.length > 0 && (
+              <>
+                {today.map((item, i) => renderItem(item, i, 'today'))}
+              </>
+            )}
+            {upcoming.length > 0 && (
+              <>
+                {upcoming.map((item, i) => renderItem(item, i, 'upcoming'))}
+              </>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
