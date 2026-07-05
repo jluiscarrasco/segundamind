@@ -149,7 +149,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground shrink-0">
           {typeLabels[item.type]}
         </span>
-        <span className="text-xs font-medium text-foreground truncate flex-1">{item.name}</span>
+        <span className="text-sm font-semibold text-foreground truncate flex-1">{item.name}</span>
         <span className="text-[11px] text-muted-foreground truncate max-w-[100px] hidden sm:block">{item.parentInfo}</span>
         {item.status !== 'active' && item.status !== 'ready' && (
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
@@ -234,7 +234,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         </div>
         <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
           {overdue.length === 0 && today.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin tareas por hacer</div>
           ) : (
             <>
               {overdue.length > 0 && (
@@ -259,7 +259,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         </div>
         <div className="divide-y divide-border overflow-y-auto flex-1 max-h-96">
           {upcoming.length === 0 ? (
-            <div className="px-4 py-6 text-center text-xs text-muted-foreground">-</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">Sin tareas</div>
           ) : (
             upcoming.map((item, i) => renderItem(item, i, 'upcoming'))
           )}
