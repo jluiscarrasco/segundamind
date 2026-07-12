@@ -16,7 +16,6 @@ import { UndatedTasks } from '@/components/UndatedTasks';
 import { InboxPanel } from '@/components/InboxPanel';
 import { DetailPanel } from '@/components/DetailPanel';
 import { EntitySidebar, type EntityFormData } from '@/components/EntitySidebar';
-import { KanbanBoard } from '@/components/KanbanBoard';
 import { CalendarView } from '@/components/CalendarView';
 import { BacklogView } from '@/components/BacklogView';
 import { KnowledgeBaseView } from '@/components/KnowledgeBaseView';
@@ -27,7 +26,7 @@ import { useStoreContext } from '@/store/StoreContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
-import { LayoutDashboard, Columns3, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
 import { addDaysCETKey, getTodayKeyCET } from '@/lib/dateUtils';
 import { filterByQuickView, type QuickView } from '@/lib/quickViews';
 import { QuickTaskList } from '@/components/QuickTaskList';
@@ -40,7 +39,7 @@ type ModalState =
   | { mode: 'create'; type: 'task'; projectId: string }
   | { mode: 'edit'; type: EntityType; id: string };
 
-type ViewMode = 'dashboard' | 'kanban' | 'calendar' | 'backlog' | 'knowledge' | 'files';
+type ViewMode = 'dashboard' | 'calendar' | 'backlog' | 'knowledge' | 'files';
 
 const Index = () => {
   const store = useStoreContext();
@@ -301,17 +300,6 @@ const Index = () => {
               Dashboard
             </button>
             <button
-              onClick={() => changeView('kanban')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'kanban'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Columns3 className="w-3.5 h-3.5" />
-              Board
-            </button>
-            <button
               onClick={() => changeView('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                 viewMode === 'calendar'
@@ -366,20 +354,6 @@ const Index = () => {
           />
         ) : viewMode === 'files' ? (
           <FilesView />
-        ) : viewMode === 'kanban' ? (
-          <div className="p-6 space-y-4">
-            <KanbanBoard
-              tasks={filteredTasks}
-              projects={filteredProjects}
-              areas={filteredAreas}
-              resources={store.resources}
-              onEditEntity={handleEditEntity}
-              onUpdateTask={store.updateTask}
-              onAddTask={(projectId) => setModal({ mode: 'create', type: 'task', projectId })}
-              selectedProjectId={selectedProjectId}
-              onQuickEdit={handleQuickEditTask}
-            />
-          </div>
         ) : viewMode === 'backlog' ? (
           <div className="p-6">
             <BacklogView
