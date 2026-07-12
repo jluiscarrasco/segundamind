@@ -48,7 +48,7 @@ export function QuickTaskEdit({ task, projects, areas, onUpdate, layout = 'hover
                 ? 'opacity-100 ring-1 ring-offset-1 ring-primary'
                 : 'opacity-40 hover:opacity-60'
             }`}
-            style={{ backgroundColor: `var(--importance-${key})` }}
+            style={{ backgroundColor: `hsl(var(--importance-${key}))` }}
           />
         ))}
       </div>
