@@ -1006,12 +1006,367 @@ Respond with JSON: {
 });
 
 // ============================================================================
-// MCP - Model Context Protocol server
+// MCP - Model Context Protocol server (Streamable HTTP + JSON-RPC 2.0)
 // ============================================================================
+
+// Auth: personal tokens (mcp_…) created in the "Acceso para Claude (MCP)"
+// dialog. Only the SHA-256 hash is stored in api_tokens; the bearer token is
+// hashed and looked up. Returns the owning userId — every tool is scoped to it.
+async function verifyMcpToken(req: express.Request): Promise<string> {
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Bearer ')) throw new Error('Missing bearer token');
+  const token = header.slice(7).trim();
+  const hash = require('crypto').createHash('sha256').update(token).digest('hex');
+  const snap = await db.collection('api_tokens').where('tokenHash', '==', hash).limit(1).get();
+  if (snap.empty) throw new Error('Invalid token');
+  const tokenDoc = snap.docs[0];
+  // Refresh lastUsedAt at most every 5 minutes to avoid write churn
+  const last = tokenDoc.data().lastUsedAt?.toMillis?.() ?? 0;
+  if (Date.now() - last > 5 * 60 * 1000) {
+    tokenDoc.ref.update({ lastUsedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+  }
+  return tokenDoc.data().userId;
+}
+
+const toIso = (t: any): string | null => t?.toDate?.()?.toISOString?.() ?? null;
+
+const TASK_STATUSES = ['funnel', 'ready', 'active', 'waiting', 'blocked', 'finished'];
+const IMPORTANCES = ['critical', 'important', 'normal', 'low', 'none'];
+
+async function fetchOwned(col: string, userId: string) {
+  const snap = await db.collection(col).where('userId', '==', userId).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+}
+
+async function getOwnedDoc(col: string, id: string, userId: string) {
+  const snap = await db.collection(col).doc(id).get();
+  if (!snap.exists || snap.data()!.userId !== userId) throw new Error(`Documento no encontrado: ${col}/${id}`);
+  return { id: snap.id, ...snap.data() } as any;
+}
+
+const MCP_TOOLS = [
+  {
+    name: 'list_areas',
+    description: 'Lista todas las áreas de vida/trabajo del usuario (nivel superior de la jerarquía Área → Proyecto → Tarea).',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'list_projects',
+    description: 'Lista los proyectos del usuario, opcionalmente filtrados por área.',
+    inputSchema: {
+      type: 'object',
+      properties: { areaId: { type: 'string', description: 'Filtrar por ID de área' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_tasks',
+    description: 'Lista tareas. Por defecto excluye las terminadas (finished). Estados: funnel, ready, active, waiting, blocked, finished.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string', description: 'Filtrar por ID de proyecto' },
+        status: { type: 'string', enum: TASK_STATUSES, description: 'Filtrar por estado' },
+        includeFinished: { type: 'boolean', description: 'Incluir tareas terminadas (por defecto false)' },
+        limit: { type: 'number', description: 'Máximo de resultados (por defecto 100)' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_task',
+    description: 'Obtiene el detalle completo de una tarea por su ID.',
+    inputSchema: {
+      type: 'object',
+      properties: { taskId: { type: 'string' } },
+      required: ['taskId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_task',
+    description: 'Crea una tarea en un proyecto. Importancia: critical, important, normal, low, none. reviewDate en formato YYYY-MM-DD.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: { type: 'string' },
+        name: { type: 'string' },
+        description: { type: 'string' },
+        importance: { type: 'string', enum: IMPORTANCES },
+        status: { type: 'string', enum: TASK_STATUSES },
+        reviewDate: { type: 'string', description: 'YYYY-MM-DD' },
+      },
+      required: ['projectId', 'name'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_task',
+    description: 'Actualiza campos de una tarea (nombre, descripción, estado, importancia, fecha de revisión, esfuerzo en minutos).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        name: { type: 'string' },
+        description: { type: 'string' },
+        status: { type: 'string', enum: TASK_STATUSES },
+        importance: { type: 'string', enum: IMPORTANCES },
+        reviewDate: { type: ['string', 'null'], description: 'YYYY-MM-DD o null para quitar la fecha' },
+        effort: { type: ['number', 'null'], description: 'Esfuerzo estimado en minutos, o null' },
+      },
+      required: ['taskId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'add_inbox_item',
+    description: 'Captura rápida: añade una nota o enlace al inbox universal para procesar después.',
+    inputSchema: {
+      type: 'object',
+      properties: { content: { type: 'string' } },
+      required: ['content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_inbox',
+    description: 'Lista los elementos pendientes del inbox universal.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'search',
+    description: 'Busca por texto en nombres y descripciones de áreas, proyectos y tareas.',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string' } },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'list_wiki_pages',
+    description: 'Lista las páginas de wiki/documentación, opcionalmente filtradas por la entidad a la que pertenecen.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', enum: ['area', 'project', 'task'] },
+        entityId: { type: 'string' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_wiki_page',
+    description: 'Obtiene el contenido Markdown completo de una página de wiki.',
+    inputSchema: {
+      type: 'object',
+      properties: { pageId: { type: 'string' } },
+      required: ['pageId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'create_wiki_page',
+    description: 'Crea una página de wiki (Markdown) asociada a un área, proyecto o tarea.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        entityType: { type: 'string', enum: ['area', 'project', 'task'] },
+        entityId: { type: 'string' },
+        title: { type: 'string' },
+        content: { type: 'string', description: 'Contenido en Markdown' },
+      },
+      required: ['entityType', 'entityId', 'title', 'content'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'update_wiki_page',
+    description: 'Actualiza el título y/o contenido Markdown de una página de wiki.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string' },
+        title: { type: 'string' },
+        content: { type: 'string' },
+      },
+      required: ['pageId'],
+      additionalProperties: false,
+    },
+  },
+];
+
+async function runMcpTool(name: string, args: any, userId: string): Promise<any> {
+  switch (name) {
+    case 'list_areas': {
+      const areas = await fetchOwned('areas', userId);
+      return areas.map(a => ({
+        id: a.id, name: a.name, description: a.description || null,
+        importance: a.importance, status: a.status, reviewDate: a.reviewDate || null,
+      }));
+    }
+
+    case 'list_projects': {
+      let projects = await fetchOwned('projects', userId);
+      if (args.areaId) projects = projects.filter(p => p.areaId === args.areaId);
+      return projects.map(p => ({
+        id: p.id, key: p.key, name: p.name, areaId: p.areaId,
+        description: p.description || null, importance: p.importance,
+        status: p.status, reviewDate: p.reviewDate || null,
+      }));
+    }
+
+    case 'list_tasks': {
+      let tasks = await fetchOwned('tasks', userId);
+      const projects = await fetchOwned('projects', userId);
+      const keyOf = (pid: string) => projects.find(p => p.id === pid)?.key || '?';
+      if (args.projectId) tasks = tasks.filter(t => t.projectId === args.projectId);
+      if (args.status) tasks = tasks.filter(t => t.status === args.status);
+      else if (!args.includeFinished) tasks = tasks.filter(t => t.status !== 'finished');
+      const limit = Math.min(Number(args.limit) || 100, 500);
+      return tasks.slice(0, limit).map(t => ({
+        id: t.id, displayId: `${keyOf(t.projectId)}-${t.taskNumber}`, name: t.name,
+        projectId: t.projectId, status: t.status, importance: t.importance,
+        reviewDate: t.reviewDate || null, effort: t.effort ?? null,
+        description: t.description || null,
+      }));
+    }
+
+    case 'get_task': {
+      const t = await getOwnedDoc('tasks', args.taskId, userId);
+      return {
+        id: t.id, name: t.name, projectId: t.projectId, taskNumber: t.taskNumber,
+        status: t.status, importance: t.importance, reviewDate: t.reviewDate || null,
+        effort: t.effort ?? null, description: t.description || null,
+        createdAt: toIso(t.createdAt),
+      };
+    }
+
+    case 'create_task': {
+      if (args.status && !TASK_STATUSES.includes(args.status)) throw new Error('Estado inválido');
+      if (args.importance && !IMPORTANCES.includes(args.importance)) throw new Error('Importancia inválida');
+      const created = await db.runTransaction(async tx => {
+        const pRef = db.collection('projects').doc(args.projectId);
+        const pSnap = await tx.get(pRef);
+        if (!pSnap.exists || pSnap.data()!.userId !== userId) throw new Error('Proyecto no encontrado');
+        const next = (pSnap.data()!.taskCounter ?? 0) + 1;
+        tx.update(pRef, { taskCounter: next });
+        const tRef = db.collection('tasks').doc();
+        tx.set(tRef, {
+          projectId: args.projectId,
+          taskNumber: next,
+          name: args.name,
+          description: args.description || '',
+          status: args.status || 'funnel',
+          importance: args.importance || 'normal',
+          effort: null,
+          reviewDate: args.reviewDate || null,
+          userId,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { id: tRef.id, displayId: `${pSnap.data()!.key}-${next}` };
+      });
+      return { ok: true, ...created };
+    }
+
+    case 'update_task': {
+      await getOwnedDoc('tasks', args.taskId, userId); // ownership check
+      if (args.status && !TASK_STATUSES.includes(args.status)) throw new Error('Estado inválido');
+      if (args.importance && !IMPORTANCES.includes(args.importance)) throw new Error('Importancia inválida');
+      const patch: any = {};
+      for (const f of ['name', 'description', 'status', 'importance', 'reviewDate', 'effort']) {
+        if (args[f] !== undefined) patch[f] = args[f];
+      }
+      if (Object.keys(patch).length === 0) throw new Error('Nada que actualizar');
+      await db.collection('tasks').doc(args.taskId).update(patch);
+      return { ok: true, updated: Object.keys(patch) };
+    }
+
+    case 'add_inbox_item': {
+      const isLink = /^https?:\/\//i.test(args.content.trim());
+      const ref = await db.collection('inbox_items').add({
+        content: args.content,
+        type: isLink ? 'link' : 'note',
+        userId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { ok: true, id: ref.id };
+    }
+
+    case 'list_inbox': {
+      const items = await fetchOwned('inbox_items', userId);
+      return items.map(i => ({ id: i.id, content: i.content, type: i.type, createdAt: toIso(i.createdAt) }));
+    }
+
+    case 'search': {
+      const q = String(args.query || '').toLowerCase();
+      if (!q) throw new Error('Query vacía');
+      const [areas, projects, tasks] = await Promise.all([
+        fetchOwned('areas', userId), fetchOwned('projects', userId), fetchOwned('tasks', userId),
+      ]);
+      const match = (x: any) =>
+        (x.name || '').toLowerCase().includes(q) || (x.description || '').toLowerCase().includes(q);
+      return {
+        areas: areas.filter(match).map(a => ({ id: a.id, name: a.name })),
+        projects: projects.filter(match).map(p => ({ id: p.id, key: p.key, name: p.name })),
+        tasks: tasks.filter(match).slice(0, 50).map(t => ({
+          id: t.id, name: t.name, status: t.status, projectId: t.projectId,
+        })),
+      };
+    }
+
+    case 'list_wiki_pages': {
+      let pages = await fetchOwned('wiki_pages', userId);
+      if (args.entityType) pages = pages.filter(w => w.entityType === args.entityType);
+      if (args.entityId) pages = pages.filter(w => w.entityId === args.entityId);
+      return pages.map(w => ({
+        id: w.id, title: w.title, entityType: w.entityType, entityId: w.entityId,
+        parentId: w.parentId || null, updatedAt: toIso(w.updatedAt),
+      }));
+    }
+
+    case 'get_wiki_page': {
+      const w = await getOwnedDoc('wiki_pages', args.pageId, userId);
+      return {
+        id: w.id, title: w.title, content: w.content || '',
+        entityType: w.entityType, entityId: w.entityId, updatedAt: toIso(w.updatedAt),
+      };
+    }
+
+    case 'create_wiki_page': {
+      const siblings = (await fetchOwned('wiki_pages', userId))
+        .filter(w => w.entityType === args.entityType && w.entityId === args.entityId);
+      const ref = await db.collection('wiki_pages').add({
+        entityType: args.entityType,
+        entityId: args.entityId,
+        title: args.title,
+        content: args.content,
+        parentId: null,
+        position: siblings.length,
+        userId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { ok: true, id: ref.id };
+    }
+
+    case 'update_wiki_page': {
+      await getOwnedDoc('wiki_pages', args.pageId, userId); // ownership check
+      const patch: any = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+      if (args.title !== undefined) patch.title = args.title;
+      if (args.content !== undefined) patch.content = args.content;
+      await db.collection('wiki_pages').doc(args.pageId).update(patch);
+      return { ok: true };
+    }
+
+    default:
+      throw new Error(`Herramienta desconocida: ${name}`);
+  }
+}
 
 router.all('/mcp', async (req, res) => {
   try {
-    const { action, path, method, body } = req.body;
+    const { path, method, body } = req.body || {};
 
     // For OAuth authorize endpoint
     if (path === '/oauth/approve' && method === 'POST') {
@@ -1081,9 +1436,93 @@ router.all('/mcp', async (req, res) => {
       return;
     }
 
-    res.status(400).json({ error: 'Unknown endpoint' });
+    // ---- MCP protocol (Streamable HTTP transport) ----
+    // Stateless server: no SSE stream, no sessions. Clients POST JSON-RPC 2.0
+    // messages and get a JSON response.
+    if (req.method === 'GET') {
+      res.status(405).json({ error: 'SSE stream not supported. POST JSON-RPC messages.' });
+      return;
+    }
+    if (req.method === 'DELETE') {
+      res.status(200).send('');
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
+    const msg = req.body;
+    if (!msg || msg.jsonrpc !== '2.0' || typeof msg.method !== 'string') {
+      res.status(400).json({ error: 'Expected a JSON-RPC 2.0 message' });
+      return;
+    }
+
+    // Notifications (no id) just get acknowledged
+    if (msg.id === undefined || msg.id === null) {
+      res.status(202).send('');
+      return;
+    }
+
+    const reply = (result: any) => res.json({ jsonrpc: '2.0', id: msg.id, result });
+
+    switch (msg.method) {
+      case 'initialize':
+        reply({
+          protocolVersion: typeof msg.params?.protocolVersion === 'string'
+            ? msg.params.protocolVersion : '2025-03-26',
+          capabilities: { tools: {} },
+          serverInfo: { name: 'segundo-cerebro', version: '1.0.0' },
+        });
+        return;
+
+      case 'ping':
+        reply({});
+        return;
+
+      case 'tools/list':
+        await verifyMcpToken(req);
+        reply({ tools: MCP_TOOLS });
+        return;
+
+      case 'tools/call': {
+        const userId = await verifyMcpToken(req);
+        const toolName = msg.params?.name;
+        const toolArgs = msg.params?.arguments || {};
+        try {
+          const result = await runMcpTool(toolName, toolArgs, userId);
+          reply({
+            content: [{
+              type: 'text',
+              text: typeof result === 'string' ? result : JSON.stringify(result, null, 2),
+            }],
+          });
+        } catch (toolError: any) {
+          // Tool failures are results (isError), not protocol errors
+          reply({ content: [{ type: 'text', text: `Error: ${toolError.message}` }], isError: true });
+        }
+        return;
+      }
+
+      case 'resources/list':
+        reply({ resources: [] });
+        return;
+
+      case 'prompts/list':
+        reply({ prompts: [] });
+        return;
+
+      default:
+        res.json({ jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: `Method not found: ${msg.method}` } });
+        return;
+    }
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    // Auth failures on MCP requests → 401 so clients surface re-auth
+    const isAuthError = /token/i.test(error.message || '');
+    const id = req.body?.id ?? null;
+    res.status(isAuthError ? 401 : 400).json({
+      jsonrpc: '2.0', id, error: { code: isAuthError ? -32001 : -32603, message: error.message },
+    });
   }
 });
 

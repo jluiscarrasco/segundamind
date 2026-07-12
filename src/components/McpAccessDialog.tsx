@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { db } from "@/integrations/firebase/config";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, query, where, orderBy, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { toast } from "sonner";
 
 interface ApiToken {
@@ -43,11 +43,11 @@ export function McpAccessDialog({ children }: { children: React.ReactNode }) {
     if (!user) return;
     setLoading(true);
     try {
+      // Sort in JS — where + orderBy would require a composite index
       const querySnapshot = await getDocs(
         query(
           collection(db, "api_tokens"),
-          where("userId", "==", user.uid),
-          orderBy("createdAt", "desc")
+          where("userId", "==", user.uid)
         )
       );
       const loadedTokens = querySnapshot.docs.map(doc => ({
@@ -56,7 +56,7 @@ export function McpAccessDialog({ children }: { children: React.ReactNode }) {
         tokenPrefix: doc.data().tokenPrefix,
         createdAt: doc.data().createdAt?.toDate?.().toISOString() || new Date().toISOString(),
         lastUsedAt: doc.data().lastUsedAt?.toDate?.().toISOString() || null,
-      }));
+      })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setTokens(loadedTokens);
     } catch (error: any) {
       toast.error(error.message || "Error loading tokens");
