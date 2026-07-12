@@ -148,16 +148,19 @@ export function useStore() {
     return { ...area, id: docRef.id, createdAt: new Date().toISOString() };
   }, [user]);
 
+  // Update/delete helpers apply local state FIRST (optimistic — instant UI),
+  // then await the server write. updateDoc's promise only resolves on server
+  // ack, so updating state after the await made every edit feel laggy. If the
+  // write fails, the active onSnapshot listener restores the server truth.
   const updateArea = useCallback(async (id: string, patch: Partial<Area>) => {
     const dbPatch: any = { ...patch };
     delete dbPatch.id;
     delete dbPatch.createdAt;
-    await updateDoc(doc(db, 'areas', id), dbPatch);
     setData(d => ({ ...d, areas: d.areas.map(a => a.id === id ? { ...a, ...patch } : a) }));
+    await updateDoc(doc(db, 'areas', id), dbPatch);
   }, []);
 
   const deleteArea = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'areas', id));
     setData(d => {
       const projectIds = d.projects.filter(p => p.areaId === id).map(p => p.id);
       return {
@@ -168,6 +171,7 @@ export function useStore() {
         resources: d.resources.filter(r => !projectIds.includes(r.entityId) && r.entityId !== id),
       };
     });
+    await deleteDoc(doc(db, 'areas', id));
   }, []);
 
   // --- Projects ---
@@ -189,18 +193,18 @@ export function useStore() {
     const dbPatch: any = { ...patch };
     delete dbPatch.id;
     delete dbPatch.createdAt;
-    await updateDoc(doc(db, 'projects', id), dbPatch);
     setData(d => ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, ...patch } : p) }));
+    await updateDoc(doc(db, 'projects', id), dbPatch);
   }, []);
 
   const deleteProject = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'projects', id));
     setData(d => ({
       ...d,
       projects: d.projects.filter(p => p.id !== id),
       tasks: d.tasks.filter(t => t.projectId !== id),
       resources: d.resources.filter(r => r.entityId !== id),
     }));
+    await deleteDoc(doc(db, 'projects', id));
   }, []);
 
   // --- Tasks ---
@@ -236,13 +240,13 @@ export function useStore() {
     delete dbPatch.projectId;
     // Firestore rejects undefined values in updateDoc
     Object.keys(dbPatch).forEach(k => dbPatch[k] === undefined && delete dbPatch[k]);
-    await updateDoc(doc(db, 'tasks', id), dbPatch);
     setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, ...patch } : t) }));
+    await updateDoc(doc(db, 'tasks', id), dbPatch);
   }, []);
 
   const deleteTask = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'tasks', id));
     setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) }));
+    await deleteDoc(doc(db, 'tasks', id));
   }, []);
 
   // --- Inbox ---
@@ -262,8 +266,8 @@ export function useStore() {
   }, []);
 
   const removeInboxItem = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'inbox_items', id));
     setData(d => ({ ...d, inbox: d.inbox.filter(i => i.id !== id) }));
+    await deleteDoc(doc(db, 'inbox_items', id));
   }, []);
 
   const convertInboxToTask = useCallback(async (inboxId: string, projectId: string, importance: Task['importance'], taskName?: string, taskDescription?: string) => {
@@ -409,8 +413,8 @@ export function useStore() {
   }, [user]);
 
   const removeResource = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'resources', id));
     setData(d => ({ ...d, resources: d.resources.filter(r => r.id !== id) }));
+    await deleteDoc(doc(db, 'resources', id));
   }, []);
 
   // --- Wiki Pages ---
@@ -430,17 +434,16 @@ export function useStore() {
     delete dbPatch.id;
     delete dbPatch.createdAt;
     delete dbPatch.updatedAt; // Will be overwritten by serverTimestamp
-    await updateDoc(doc(db, 'wiki_pages', id), dbPatch);
     setData(d => ({
       ...d,
       wikiPages: d.wikiPages.map(w =>
         w.id === id ? { ...w, ...patch, updatedAt: new Date().toISOString() } : w
       ),
     }));
+    await updateDoc(doc(db, 'wiki_pages', id), dbPatch);
   }, []);
 
   const deleteWikiPage = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, 'wiki_pages', id));
     setData(d => {
       const idsToRemove = new Set<string>();
       const collectChildren = (parentId: string) => {
@@ -450,19 +453,20 @@ export function useStore() {
       collectChildren(id);
       return { ...d, wikiPages: d.wikiPages.filter(w => !idsToRemove.has(w.id)) };
     });
+    await deleteDoc(doc(db, 'wiki_pages', id));
   }, []);
 
   const reorderWikiPage = useCallback(async (id: string, newParentId: string | null, newPosition: number) => {
-    await updateDoc(doc(db, 'wiki_pages', id), {
-      parentId: newParentId,
-      position: newPosition,
-    });
     setData(d => ({
       ...d,
       wikiPages: d.wikiPages.map(w =>
         w.id === id ? { ...w, parentId: newParentId, position: newPosition } : w
       ),
     }));
+    await updateDoc(doc(db, 'wiki_pages', id), {
+      parentId: newParentId,
+      position: newPosition,
+    });
   }, []);
 
   return {
