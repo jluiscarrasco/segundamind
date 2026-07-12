@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { initializeFirestore, connectFirestoreEmulator, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'firebase/app-check';
 
@@ -21,7 +21,15 @@ export const auth = getAuth(app);
 // 'Listen' stream transport errored" / 400 Bad Request on networks (common
 // on mobile carriers, VPNs, corporate proxies, some ad blockers) that don't
 // support Firestore's default fetch-streaming transport.
-export const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+// persistentLocalCache: without it, every page load / listener reconnect
+// (e.g. after an hourly token refresh with expired resume tokens) re-reads
+// EVERY document of every listened collection from the server — the source
+// of the 34K-read spikes. With IndexedDB persistence, reconnects serve from
+// cache and only sync deltas.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
 export const storage = getStorage(app);
 
 // App Check only runs in production builds: in local dev the reCAPTCHA

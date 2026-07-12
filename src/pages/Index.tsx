@@ -23,7 +23,7 @@ import { KnowledgeBaseView } from '@/components/KnowledgeBaseView';
 import { FilesView } from '@/components/FilesView';
 import { MobileNoteCaptureView } from '@/components/MobileNoteCaptureView';
 
-import { useStore } from '@/store/useStore';
+import { useStoreContext } from '@/store/StoreContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
@@ -43,7 +43,7 @@ type ModalState =
 type ViewMode = 'dashboard' | 'kanban' | 'calendar' | 'backlog' | 'knowledge' | 'files';
 
 const Index = () => {
-  const store = useStore();
+  const store = useStoreContext();
   const isMobile = useIsMobile();
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileIcon, Download, ExternalLink, FileText, Image as ImageIcon } from 'lucide-react';
-import { useDrive } from '@/hooks/useDrive';
+import { useDriveContext } from '@/hooks/DriveContext';
 import type { EntityType } from '@/types';
 import { toast } from 'sonner';
 
@@ -26,7 +26,7 @@ function fileIcon(mime: string | null) {
 }
 
 export function LinkedFilesList({ entityType, entityId, descendantIds = [] }: Props) {
-  const { files, links, getSignedUrl } = useDrive();
+  const { files, links, getSignedUrl } = useDriveContext();
 
   const targets = [{ type: entityType, id: entityId }, ...descendantIds];
   const targetSet = new Set(targets.map(t => `${t.type}:${t.id}`));

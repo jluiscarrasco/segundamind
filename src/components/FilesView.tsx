@@ -18,8 +18,8 @@ import {
   File as FileIcon,
   MoreHorizontal,
 } from 'lucide-react';
-import { useDrive } from '@/hooks/useDrive';
-import { useStore } from '@/store/useStore';
+import { useDriveContext } from '@/hooks/DriveContext';
+import { useStoreContext } from '@/store/StoreContext';
 import { FileLinksManager } from './FileLinksManager';
 import type { UserFolder, UserFile, EntityType } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -73,8 +73,8 @@ function fileIcon(mime: string | null) {
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export function FilesView() {
-  const drive = useDrive();
-  const { areas, projects, tasks } = useStore();
+  const drive = useDriveContext();
+  const { areas, projects, tasks } = useStoreContext();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);

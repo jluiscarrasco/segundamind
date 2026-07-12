@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useStore } from '@/store/useStore';
+import { useStoreContext } from '@/store/StoreContext';
 import type { UserFileLink, EntityType } from '@/types';
 import { toast } from 'sonner';
 
@@ -35,7 +35,7 @@ const LABELS: Record<EntityType, string> = {
 };
 
 export function FileLinksManager({ fileId, links, onAdd, onRemove }: Props) {
-  const { areas, projects, tasks } = useStore();
+  const { areas, projects, tasks } = useStoreContext();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 

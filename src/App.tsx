@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { StoreProvider } from "@/store/StoreContext";
+import { DriveProvider } from "@/hooks/DriveContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -47,14 +49,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/install" element={<InstallPage />} />
-            <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <StoreProvider>
+            <DriveProvider>
+              <Routes>
+                <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/install" element={<InstallPage />} />
+                <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </DriveProvider>
+          </StoreProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
