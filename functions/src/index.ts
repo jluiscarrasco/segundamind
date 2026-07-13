@@ -1006,6 +1006,96 @@ Respond with JSON: {
 });
 
 // ============================================================================
+// OAuth 2.0 + MCP - Model Context Protocol server
+// ============================================================================
+
+// OAuth endpoints (REST) for Claude's standard OAuth flow
+router.get('/oauth/authorize', async (req, res) => {
+  try {
+    const { response_type, client_id, redirect_uri, state, code_challenge } = req.query;
+    if (response_type !== 'code') {
+      res.status(400).json({ error: 'response_type must be "code"' });
+      return;
+    }
+    if (!client_id || !redirect_uri) {
+      res.status(400).json({ error: 'Missing client_id or redirect_uri' });
+      return;
+    }
+
+    // Generate authorization code (auto-approve; Claude Desktop is a trusted app)
+    const code = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await db.collection('oauth_codes').doc(code).set({
+      clientId: client_id as string,
+      redirectUri: redirect_uri as string,
+      codeChallenge: code_challenge as string || null,
+      expiresAt,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      autoApproved: true, // Claude Desktop is trusted
+    });
+
+    const redirectUrl = new URL(redirect_uri as string);
+    redirectUrl.searchParams.set('code', code);
+    if (state) redirectUrl.searchParams.set('state', state as string);
+
+    res.redirect(redirectUrl.toString());
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/oauth/token', async (req, res) => {
+  try {
+    const { code, code_verifier, grant_type } = req.body;
+
+    const codeDoc = await db.collection('oauth_codes').doc(code).get();
+    if (!codeDoc.exists) {
+      res.status(400).json({ error: 'invalid_code' });
+      return;
+    }
+
+    const codeData = codeDoc.data();
+    if (!codeData) {
+      res.status(400).json({ error: 'invalid_code' });
+      return;
+    }
+
+    if (codeData.expiresAt < new Date()) {
+      res.status(400).json({ error: 'expired_code' });
+      return;
+    }
+
+    // Verify PKCE if code_challenge was set
+    if (codeData.codeChallenge) {
+      const crypto = require('crypto');
+      const hash = crypto
+        .createHash('sha256')
+        .update(code_verifier || '')
+        .digest('base64url');
+      if (hash !== codeData.codeChallenge) {
+        res.status(400).json({ error: 'invalid_grant' });
+        return;
+      }
+    }
+
+    // For Claude OAuth: create a custom token for a "Claude" virtual user
+    // Every code_id maps to a unique Firebase custom token scoped to that OAuth session
+    const customToken = await auth.createCustomToken(`claude-oauth-${code}`);
+
+    await db.collection('oauth_codes').doc(code).delete();
+
+    res.json({
+      access_token: customToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // MCP - Model Context Protocol server (Streamable HTTP + JSON-RPC 2.0)
 // ============================================================================
 
