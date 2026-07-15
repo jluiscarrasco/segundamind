@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
+import type { ScoreBreakdown } from '@/lib/scoring';
 import { getTaskDisplayId } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
@@ -19,6 +20,7 @@ interface AgendaItem {
   reviewDate: string;
   parentInfo: string;
   score?: number;
+  scoreBreakdown?: ScoreBreakdown;
   isOverdue: boolean;
   status: Task['status'];
 }
@@ -52,7 +54,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
       if (t.status !== 'finished' && t.reviewDate) {
         const project = projects.find(p => p.id === t.projectId);
         const area = project ? areas.find(a => a.id === project.areaId) : null;
-        const score = scoreTaskDetailed(t, projects, areas);
+        const scoreBreakdown = scoreTaskDetailed(t, projects, areas);
         all.push({
           type: 'task',
           id: t.id,
@@ -60,7 +62,8 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           importance: t.importance,
           reviewDate: t.reviewDate,
           parentInfo: `${area?.name || ''} › ${project?.name || ''}`,
-          score: score.total,
+          score: scoreBreakdown.total,
+          scoreBreakdown,
           isOverdue: t.reviewDate < todayKey,
           status: t.status,
         });
@@ -167,13 +170,20 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                 return task ? getTaskDisplayId(projects, task) : '?-?';
               })()}
             </span>
-            {item.score !== undefined && (
-              <span className={`text-[10px] font-bold px-2 py-1 rounded shrink-0 ${
-                item.score >= 100 ? 'bg-destructive/15 text-destructive' :
-                item.score >= 60 ? 'bg-orange-500/15 text-orange-600' :
-                item.score >= 30 ? 'bg-primary/10 text-primary' :
-                'bg-muted text-muted-foreground'
-              }`}>
+            {item.score !== undefined && item.scoreBreakdown && (
+              <span
+                title={[
+                  item.scoreBreakdown.baseLabel,
+                  item.scoreBreakdown.urgencyLabel,
+                  item.scoreBreakdown.cascadeLabel,
+                  item.scoreBreakdown.multiplierLabel
+                ].filter(Boolean).join('\n')}
+                className={`text-[10px] font-bold px-2 py-1 rounded shrink-0 cursor-help ${
+                  item.score >= 100 ? 'bg-destructive/15 text-destructive' :
+                  item.score >= 60 ? 'bg-orange-500/15 text-orange-600' :
+                  item.score >= 30 ? 'bg-primary/10 text-primary' :
+                  'bg-muted text-muted-foreground'
+                }`}>
                 {item.score}pts
               </span>
             )}
@@ -249,6 +259,27 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-1">TAREA</p>
               <p className="text-sm font-semibold text-foreground">{selectedTask.name}</p>
+              {(() => {
+                const breakdown = scoreTaskDetailed(selectedTask, projects, areas);
+                return (
+                  <div className="mt-2 pt-2 border-t border-border space-y-1">
+                    <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
+                      breakdown.total >= 100 ? 'bg-destructive/15 text-destructive' :
+                      breakdown.total >= 60 ? 'bg-orange-500/15 text-orange-600' :
+                      breakdown.total >= 30 ? 'bg-primary/10 text-primary' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {breakdown.total} pts
+                    </div>
+                    <div className="text-[11px] text-muted-foreground space-y-0.5">
+                      {breakdown.baseLabel && <div>• {breakdown.baseLabel}</div>}
+                      {breakdown.urgencyLabel && <div>• {breakdown.urgencyLabel}</div>}
+                      {breakdown.cascadeLabel && <div>• {breakdown.cascadeLabel}</div>}
+                      {breakdown.multiplierLabel && <div>• {breakdown.multiplierLabel}</div>}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div
               className="space-y-3 border-t border-border pt-3"
