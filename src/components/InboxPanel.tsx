@@ -31,6 +31,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const [input, setInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [convertMode, setConvertMode] = useState<ConvertMode>('task');
+  const [selectedArea, setSelectedArea] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [selectedImportance, setSelectedImportance] = useState<Importance>('normal');
   const [classifying, setClassifying] = useState(false);
@@ -447,19 +448,30 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                                 className="w-full bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary resize-none"
                               />
                               <select
-                                value={selectedProject}
-                                onChange={e => setSelectedProject(e.target.value)}
+                                value={selectedArea}
+                                onChange={e => {
+                                  setSelectedArea(e.target.value);
+                                  setSelectedProject(''); // Reset project when area changes
+                                }}
                                 className="w-full bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none"
                               >
+                                <option value="">Seleccionar área...</option>
+                                {areas.map(a => (
+                                  <option key={a.id} value={a.id}>{a.name}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={selectedProject}
+                                onChange={e => setSelectedProject(e.target.value)}
+                                disabled={!selectedArea}
+                                className="w-full bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none disabled:opacity-50"
+                              >
                                 <option value="">Seleccionar proyecto...</option>
-                                {projects.map(p => {
-                                  const area = getAreaForProject(p.id);
-                                  return (
-                                    <option key={p.id} value={p.id}>
-                                      {area?.name} › {p.name}
-                                    </option>
-                                  );
-                                })}
+                                {projects
+                                  .filter(p => p.areaId === selectedArea)
+                                  .map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
                               </select>
                               <select
                                 value={selectedImportance}
