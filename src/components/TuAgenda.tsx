@@ -258,33 +258,25 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           <div className="w-1/2 overflow-y-auto p-4 space-y-4">
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-2">TAREA</p>
-              <div className="flex items-start gap-3">
+              <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-foreground flex-1">{selectedTask.name}</p>
                 {(() => {
                   const breakdown = scoreTaskDetailed(selectedTask, projects, areas);
                   return (
-                    <div className="flex-shrink-0 space-y-1 text-right">
-                      <div
-                        title={[
-                          breakdown.baseLabel,
-                          breakdown.urgencyLabel,
-                          breakdown.cascadeLabel,
-                          breakdown.multiplierLabel
-                        ].filter(Boolean).join('\n')}
-                        className={`text-xs font-bold px-2 py-1 rounded cursor-help inline-block ${
-                          breakdown.total >= 100 ? 'bg-destructive/15 text-destructive' :
-                          breakdown.total >= 60 ? 'bg-orange-500/15 text-orange-600' :
-                          breakdown.total >= 30 ? 'bg-primary/10 text-primary' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
-                        {breakdown.total} pts
-                      </div>
-                      <div className="text-[10px] text-muted-foreground space-y-0.5">
-                        {breakdown.baseLabel && <div>• {breakdown.baseLabel}</div>}
-                        {breakdown.urgencyLabel && <div>• {breakdown.urgencyLabel}</div>}
-                        {breakdown.cascadeLabel && <div>• {breakdown.cascadeLabel}</div>}
-                        {breakdown.multiplierLabel && <div>• {breakdown.multiplierLabel}</div>}
-                      </div>
+                    <div
+                      title={[
+                        breakdown.baseLabel,
+                        breakdown.urgencyLabel,
+                        breakdown.cascadeLabel,
+                        breakdown.multiplierLabel
+                      ].filter(Boolean).join('\n')}
+                      className={`text-xs font-bold px-2 py-1 rounded cursor-help flex-shrink-0 ${
+                        breakdown.total >= 100 ? 'bg-destructive/15 text-destructive' :
+                        breakdown.total >= 60 ? 'bg-orange-500/15 text-orange-600' :
+                        breakdown.total >= 30 ? 'bg-primary/10 text-primary' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                      {breakdown.total}
                     </div>
                   );
                 })()}
