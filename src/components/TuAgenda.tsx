@@ -221,7 +221,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         </div>
       </div>
       <div className="flex flex-1 min-h-0 divide-x divide-border">
-        <div className="flex-1 divide-y divide-border overflow-y-auto">
+        <div className="w-1/2 divide-y divide-border overflow-y-auto">
         {total === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-muted-foreground">No hay nada urgente. ¡Buen trabajo! 🎉</div>
         ) : (
@@ -245,13 +245,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         )}
         </div>
         {selectedTask && selectedProject && onQuickEdit ? (
-          <div className="w-80 overflow-y-auto p-4 space-y-4 bg-secondary/30">
+          <div className="w-1/2 overflow-y-auto p-4 space-y-4">
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-1">TAREA</p>
-              <p className="text-sm font-semibold text-foreground truncate">{selectedTask.name}</p>
+              <p className="text-sm font-semibold text-foreground">{selectedTask.name}</p>
             </div>
             <div
-              className="space-y-3"
+              className="space-y-3 border-t border-border pt-3"
               onClick={(e) => e.stopPropagation()}
             >
               <QuickTaskEdit
@@ -259,7 +259,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                 projects={projects}
                 areas={areas}
                 onUpdate={(field, value) => onQuickEdit(selectedTask.id, field, value)}
-                layout="hover"
+                layout="row"
               />
             </div>
             {selectedTask.description && (
@@ -274,7 +274,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
             </div>
           </div>
         ) : (
-          <div className="w-80 flex items-center justify-center text-center text-xs text-muted-foreground p-4">
+          <div className="w-1/2 flex items-center justify-center text-center text-xs text-muted-foreground">
             Selecciona una tarea
           </div>
         )}
