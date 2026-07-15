@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
@@ -7,6 +7,7 @@ import { ImportanceDot } from './StatusBadges';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
 import { QuickTaskEdit } from './QuickTaskEdit';
+import { LinkedFilesList } from './LinkedFilesList';
 
 const IMPORTANCE_ORDER: Importance[] = ['critical', 'important', 'normal', 'low', 'none'];
 
@@ -33,8 +34,15 @@ interface TuAgendaProps {
 }
 
 export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit }: TuAgendaProps) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d' | '14d'>('24h');
+
   const todayKey = getTodayKeyCET();
-  const limitKey = addDaysCETKey(7);
+  const limitKey =
+    timeRange === '24h' ? addDaysCETKey(1) :
+    timeRange === '48h' ? addDaysCETKey(2) :
+    timeRange === '7d' ? addDaysCETKey(7) :
+    addDaysCETKey(14);
 
   const { overdue, today, upcoming } = useMemo(() => {
     const all: AgendaItem[] = [];
@@ -143,8 +151,13 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.02 }}
-        onClick={() => onEditEntity(item.type, item.id)}
-        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors group ${getRowBgColor(item, section)}`}
+        onClick={() => {
+          if (item.type === 'task') setSelectedTaskId(item.id);
+          else onEditEntity(item.type, item.id);
+        }}
+        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors ${
+          item.id === selectedTaskId ? 'bg-primary/10' : getRowBgColor(item, section)
+        }`}
       >
         {item.type === 'task' && (
           <>
@@ -166,50 +179,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
             )}
           </>
         )}
-        <span className="text-sm font-semibold text-foreground flex-1">{item.name}</span>
-        <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : isToday ? 'text-primary' : 'text-muted-foreground'}`}>
-          {formatDate(item.reviewDate)}
-        </span>
-        {item.type === 'task' && onQuickEdit ? (
-          <div
-            className="shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {(() => {
-              const task = tasks.find(t => t.id === item.id);
-              return task ? (
-                <QuickTaskEdit
-                  task={task}
-                  projects={projects}
-                  areas={areas}
-                  onUpdate={(field, value) => onQuickEdit(task.id, field, value)}
-                  layout="row"
-                />
-              ) : null;
-            })()}
-          </div>
-        ) : (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPostpone(item.type, item.id, 1);
-              }}
-              className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
-            >
-              +1d
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPostpone(item.type, item.id, 7);
-              }}
-              className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 rounded px-1.5 py-0.5 transition-colors"
-            >
-              +7d
-            </button>
-          </div>
-        )}
+        <span className="text-sm font-semibold text-foreground flex-1 truncate">{item.name}</span>
       </motion.div>
     );
   };
@@ -229,15 +199,29 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
     );
   }
 
+  const selectedTask = selectedTaskId ? tasks.find(t => t.id === selectedTaskId) : null;
+  const selectedProject = selectedTask ? projects.find(p => p.id === selectedTask.projectId) : null;
+
   return (
-    <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col">
+    <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden flex flex-col h-full">
       <div className="px-5 py-4 bg-primary/8 border-b border-primary/10 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-primary">Tu Agenda</h2>
-        <span className="text-xs text-muted-foreground">
-          {total > 0 && <span>{total} tareas</span>}
-        </span>
+        <div className="flex items-center gap-2">
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value as any)}
+            className="text-xs bg-transparent text-muted-foreground border border-primary/20 rounded px-2 py-1 hover:border-primary/50 cursor-pointer"
+          >
+            <option value="24h">24h</option>
+            <option value="48h">48h</option>
+            <option value="7d">7d</option>
+            <option value="14d">14d</option>
+          </select>
+          <span className="text-xs text-muted-foreground">{total}</span>
+        </div>
       </div>
-      <div className="divide-y divide-border overflow-y-auto flex-1">
+      <div className="flex flex-1 min-h-0 divide-x divide-border">
+        <div className="flex-1 divide-y divide-border overflow-y-auto">
         {total === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-muted-foreground">No hay nada urgente. ¡Buen trabajo! 🎉</div>
         ) : (
@@ -258,6 +242,41 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
               </>
             )}
           </>
+        )}
+        </div>
+        {selectedTask && selectedProject && onQuickEdit ? (
+          <div className="w-80 overflow-y-auto p-4 space-y-4 bg-secondary/30">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1">TAREA</p>
+              <p className="text-sm font-semibold text-foreground truncate">{selectedTask.name}</p>
+            </div>
+            <div
+              className="space-y-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <QuickTaskEdit
+                task={selectedTask}
+                projects={projects}
+                areas={areas}
+                onUpdate={(field, value) => onQuickEdit(selectedTask.id, field, value)}
+                layout="hover"
+              />
+            </div>
+            {selectedTask.description && (
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">DESCRIPCIÓN</p>
+                <p className="text-xs text-muted-foreground">{selectedTask.description}</p>
+              </div>
+            )}
+            <div className="border-t border-border pt-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">ARCHIVOS</p>
+              <LinkedFilesList entityType="task" entityId={selectedTask.id} />
+            </div>
+          </div>
+        ) : (
+          <div className="w-80 flex items-center justify-center text-center text-xs text-muted-foreground p-4">
+            Selecciona una tarea
+          </div>
         )}
       </div>
     </div>
