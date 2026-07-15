@@ -83,22 +83,21 @@ export function QuickTaskEdit({ task, projects, areas, onUpdate, layout = 'hover
 
       {/* Effort Selector - only for tasks */}
       {task.effort !== undefined && (
-        <div className={`flex gap-1 ${layout === 'hover' ? 'opacity-0 group-hover:opacity-100' : ''} transition-opacity`}>
+        <select
+          value={task.effort ?? ''}
+          onChange={(e) => onUpdate('effort', e.target.value ? Number(e.target.value) : null)}
+          className={`text-[11px] px-2 py-1 rounded bg-secondary text-foreground outline-none focus:ring-1 focus:ring-primary appearance-none ${
+            layout === 'hover' ? 'opacity-0 group-hover:opacity-100' : ''
+          } transition-opacity cursor-pointer`}
+          title="Esfuerzo estimado"
+        >
+          <option value="">Sin estimar</option>
           {EFFORT_OPTIONS.map(opt => (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => onUpdate('effort', opt.value)}
-              className={`text-[9px] px-1.5 py-0.5 rounded font-medium transition-all ${
-                task.effort === opt.value
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
-              }`}
-            >
+            <option key={String(opt.value)} value={String(opt.value)}>
               {opt.label}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       )}
     </div>
   );
