@@ -18,6 +18,7 @@ import {
   Clock,
   CalendarOff,
   Inbox,
+  LockX,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +52,7 @@ const QUICK_VIEW_META: { key: QuickView; Icon: typeof Zap; accent: string }[] = 
   { key: 'today', Icon: Zap, accent: 'text-primary' },
   { key: 'overdue', Icon: AlertTriangle, accent: 'text-destructive' },
   { key: 'waiting', Icon: Clock, accent: 'text-status-waiting' },
+  { key: 'blocked', Icon: LockX, accent: 'text-gray-500' },
   { key: 'undated', Icon: CalendarOff, accent: 'text-muted-foreground' },
 ];
 
