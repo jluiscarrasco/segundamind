@@ -59,11 +59,9 @@ function SignOutButton() {
   return (
     <button
       onClick={signOut}
-      className="w-full flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors py-1"
+      className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5"
       title={user?.email || ""}>
-      
-      <LogOut className="w-3 h-3" />
-      <span className="truncate">{user?.email}</span>
+      <LogOut className="w-4 h-4" />
     </button>);
 
 }
@@ -75,10 +73,9 @@ function PushNotificationToggle() {
     <button
       onClick={toggle}
       disabled={isLoading}
-      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+      className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50 p-1.5"
       title={isEnabled ? "Desactivar notificaciones" : "Activar notificaciones"}>
-      
-      {isEnabled ? <Bell className="w-3 h-3 text-primary" /> : <BellOff className="w-3 h-3" />}
+      {isEnabled ? <Bell className="w-4 h-4 text-blue-600" /> : <BellOff className="w-4 h-4" />}
     </button>);
 
 }
@@ -113,20 +110,12 @@ export function AppSidebar({
   const activeAreas = areas.filter((a) => a.status !== "blocked" && a.status !== "finished");
 
   return (
-    <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col overflow-hidden shrink-0">
-      {/* Header */}
-      <div className="p-3 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <Brain className="w-5 h-5 text-primary" />
-          <h1 className="text-sm font-bold text-sidebar-accent-foreground">JL'S BRAIN</h1>
-        </div>
-      </div>
-
+    <aside className="w-56 h-screen bg-white border-r border-gray-200 flex flex-col overflow-hidden shrink-0">
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-3">
+      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Quick views */}
-        <div className="space-y-0.5">
-          <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1">⚡ Vistas rápidas</h2>
+        <div className="space-y-1.5">
+          <h2 className="text-xs font-semibold uppercase text-gray-500 px-2 py-1">Vistas rápidas</h2>
           {QUICK_VIEW_META.map(({ key, Icon, accent }) => {
             const count = filterByQuickView(key, tasks, todayKey).length;
             const active = activeQuickView === key;
@@ -134,16 +123,16 @@ export function AppSidebar({
               <button
                 key={key}
                 onClick={() => onSelectQuickView(key)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
                   active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                    ? "bg-blue-600 text-white font-medium"
+                    : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${accent}`} />
+                <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1 text-left">{QUICK_VIEW_LABELS[key]}</span>
                 {count > 0 && (
-                  <span className="text-[10px] font-semibold text-muted-foreground bg-sidebar-accent/60 px-1.5 rounded-full tabular-nums">
+                  <span className="text-xs font-semibold text-gray-600 bg-gray-200 px-2 py-0.5 rounded-full tabular-nums">
                     {count}
                   </span>
                 )}
@@ -152,12 +141,12 @@ export function AppSidebar({
           })}
           <button
             onClick={onOpenInbox}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-all"
           >
-            <Inbox className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+            <Inbox className="w-4 h-4 shrink-0" />
             <span className="flex-1 text-left">Bandeja</span>
             {inboxCount > 0 && (
-              <span className="text-[10px] font-semibold text-primary bg-primary/15 px-1.5 rounded-full tabular-nums">
+              <span className="text-xs font-semibold text-white bg-blue-600 px-2 py-0.5 rounded-full tabular-nums">
                 {inboxCount}
               </span>
             )}
@@ -165,15 +154,15 @@ export function AppSidebar({
         </div>
 
         {/* Areas */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between px-2 py-1">
-            <h2 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📚 Áreas</h2>
+            <h2 className="text-xs font-semibold uppercase text-gray-500">Áreas</h2>
             <button
               onClick={onAddArea}
-              className="p-0.5 rounded hover:bg-sidebar-accent text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
               title="Nueva área"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
 
@@ -196,10 +185,10 @@ export function AppSidebar({
                   onClick={() => {
                     onSelectArea(area.id);
                   }}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all group ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all group ${
                     isSelected
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      ? "bg-blue-600 text-white font-medium"
+                      : "text-gray-600 hover:bg-gray-100"
                   } ${isBlocked ? "opacity-50" : ""}`}
                 >
                   <div
@@ -276,31 +265,31 @@ export function AppSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-sidebar-border p-2 space-y-2">
-        <div className="flex items-center justify-center gap-1">
+      <div className="border-t border-gray-200 p-3 space-y-2">
+        <div className="flex items-center justify-center gap-2">
           <PushNotificationToggle />
           <ChangePasswordDialog>
             <button
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors p-1.5"
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5"
               title="Cambiar contraseña"
             >
-              <KeyRound className="w-3 h-3" />
+              <KeyRound className="w-4 h-4" />
             </button>
           </ChangePasswordDialog>
           <McpAccessDialog>
             <button
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors p-1.5"
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5"
               title="Acceso MCP para Claude"
             >
-              <Plug className="w-3 h-3" />
+              <Plug className="w-4 h-4" />
             </button>
           </McpAccessDialog>
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors p-1.5 ml-auto"
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5 ml-auto"
             title="Ajustes"
           >
-            <Settings className="w-3 h-3" />
+            <Settings className="w-4 h-4" />
           </button>
           <SignOutButton />
         </div>
