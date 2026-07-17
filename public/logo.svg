@@ -1,0 +1,49 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="#F8FAFC" rx="120"/>
+
+  <!-- Brain with gradient and shadow -->
+  <g filter="url(#shadow)">
+    <!-- Top lobes -->
+    <circle cx="156" cy="140" r="52" fill="url(#brainGrad)" opacity="0.9"/>
+    <circle cx="256" cy="110" r="60" fill="url(#brainGrad)"/>
+    <circle cx="356" cy="140" r="52" fill="url(#brainGrad)" opacity="0.9"/>
+
+    <!-- Middle section with neural connections -->
+    <circle cx="120" cy="240" r="48" fill="url(#brainGrad)" opacity="0.85"/>
+    <circle cx="256" cy="250" r="65" fill="url(#brainGrad)"/>
+    <circle cx="392" cy="240" r="48" fill="url(#brainGrad)" opacity="0.85"/>
+
+    <!-- Lower lobes -->
+    <circle cx="180" cy="340" r="45" fill="url(#brainGrad)" opacity="0.8"/>
+    <circle cx="256" cy="360" r="55" fill="url(#brainGrad)"/>
+    <circle cx="332" cy="340" r="45" fill="url(#brainGrad)" opacity="0.8"/>
+
+    <!-- Brain stem -->
+    <path d="M 240 380 Q 230 420 256 450 Q 282 420 272 380"
+          fill="url(#brainGrad)" opacity="0.9" stroke="url(#brainGrad)" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Neural connections (fine lines) -->
+    <line x1="156" y1="192" x2="120" y2="240" stroke="#60A5FA" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+    <line x1="256" y1="170" x2="256" y2="250" stroke="#60A5FA" stroke-width="7" stroke-linecap="round" opacity="0.7"/>
+    <line x1="356" y1="192" x2="392" y2="240" stroke="#60A5FA" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+    <line x1="120" y1="288" x2="180" y2="340" stroke="#60A5FA" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <line x1="392" y1="288" x2="332" y2="340" stroke="#60A5FA" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <line x1="256" y1="315" x2="256" y2="380" stroke="#60A5FA" stroke-width="7" stroke-linecap="round" opacity="0.6"/>
+
+    <!-- Small connection points -->
+    <circle cx="156" cy="192" r="8" fill="#93C5FD" opacity="0.8"/>
+    <circle cx="256" cy="170" r="9" fill="#93C5FD" opacity="0.9"/>
+    <circle cx="356" cy="192" r="8" fill="#93C5FD" opacity="0.8"/>
+  </g>
+</svg>
