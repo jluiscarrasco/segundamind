@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { GlobalSearch } from '@/components/GlobalSearch';
 import { AnimatePresence } from 'framer-motion';
 import { AppSidebar } from '@/components/AppSidebar';
+import { Navbar } from '@/components/Navbar';
 import { TuAgenda } from '@/components/TuAgenda';
 import { UnprocessedNotes } from '@/components/UnprocessedNotes';
 import { CommandDialog } from '@/components/CommandDialog';
@@ -26,7 +26,6 @@ import { useStoreContext } from '@/store/StoreContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
-import { LayoutDashboard, CalendarDays, ListOrdered, BookOpen, FolderArchive } from 'lucide-react';
 import { addDaysCETKey, getTodayKeyCET } from '@/lib/dateUtils';
 import { filterByQuickView, type QuickView } from '@/lib/quickViews';
 import { QuickTaskList } from '@/components/QuickTaskList';
@@ -39,7 +38,7 @@ type ModalState =
   | { mode: 'create'; type: 'task'; projectId: string }
   | { mode: 'edit'; type: EntityType; id: string };
 
-type ViewMode = 'dashboard' | 'calendar' | 'backlog' | 'knowledge' | 'files';
+export type ViewMode = 'dashboard' | 'calendar' | 'backlog' | 'knowledge' | 'files';
 
 const Index = () => {
   const store = useStoreContext();
@@ -249,102 +248,25 @@ const Index = () => {
       />
 
       <main className="flex-1 overflow-y-auto">
-        {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-6 py-3 flex items-center gap-3">
-          {/* Breadcrumb */}
-          <button
-            onClick={() => { setSelectedAreaId(null); setSelectedProjectId(null); setViewMode('dashboard'); setQuickView(null); }}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${showDashboard && viewMode === 'dashboard' && !quickView ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard
-          </button>
-          {selectedArea && (
-            <>
-              <span className="text-muted-foreground text-xs">›</span>
-              <button
-                onClick={() => { setSelectedProjectId(null); }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {selectedArea.name}
-              </button>
-            </>
-          )}
-          {selectedProject && (
-            <>
-              <span className="text-muted-foreground text-xs">›</span>
-              <span className="text-sm text-foreground font-medium">{selectedProject.name}</span>
-            </>
-          )}
-
-          <GlobalSearch
-            areas={store.areas}
-            projects={store.projects}
-            tasks={store.tasks}
-            onSelectArea={handleSelectArea}
-            onSelectProject={handleSelectProject}
-            onEditEntity={handleEditEntity}
-          />
-
-          {/* View mode toggle */}
-          <div className="ml-auto flex items-center gap-1 bg-secondary rounded-lg p-0.5">
-            <button
-              onClick={() => changeView('dashboard')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'dashboard'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Dashboard
-            </button>
-            <button
-              onClick={() => changeView('calendar')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'calendar'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <CalendarDays className="w-3.5 h-3.5" />
-              Calendario
-            </button>
-            <button
-              onClick={() => changeView('backlog')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'backlog'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ListOrdered className="w-3.5 h-3.5" />
-              Backlog
-            </button>
-            <button
-              onClick={() => changeView('knowledge')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'knowledge'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Conocimiento
-            </button>
-            <button
-              onClick={() => changeView('files')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                viewMode === 'files'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <FolderArchive className="w-3.5 h-3.5" />
-              Archivos
-            </button>
-          </div>
-        </header>
+        <Navbar
+          viewMode={viewMode}
+          selectedArea={selectedArea}
+          selectedProject={selectedProject}
+          showDashboard={showDashboard}
+          onBackToDashboard={() => {
+            setSelectedAreaId(null);
+            setSelectedProjectId(null);
+            setViewMode('dashboard');
+            setQuickView(null);
+          }}
+          onChangeView={changeView}
+          areas={store.areas}
+          projects={store.projects}
+          tasks={store.tasks}
+          onSelectArea={handleSelectArea}
+          onSelectProject={handleSelectProject}
+          onEditEntity={handleEditEntity}
+        />
 
         {viewMode === 'knowledge' ? (
           <KnowledgeBaseView
