@@ -46,26 +46,15 @@ export function Navbar({
         {/* Logo */}
         <button
           onClick={onBackToDashboard}
-          className="flex items-center gap-2 flex-shrink-0 hover:opacity-75 transition-opacity"
+          className="flex items-center gap-2.5 flex-shrink-0 hover:opacity-75 transition-opacity"
           title="Ir al Dashboard"
         >
-          <img src="/logo.svg" alt="JL's Brain" className="w-6 h-6" />
-          <span className="hidden sm:inline text-sm font-semibold text-gray-900">JL's Brain</span>
+          <img src="/logo.svg" alt="JL's Brain" className="w-7 h-7" />
+          <span className="hidden sm:inline text-base font-semibold text-gray-900">JL's Brain</span>
         </button>
 
         {/* Breadcrumb Navigation */}
         <div className="flex items-center gap-3 text-sm text-gray-600">
-          <button
-            onClick={onBackToDashboard}
-            className={`transition-colors ${
-              showDashboard && viewMode === 'dashboard'
-                ? 'text-gray-900 font-medium'
-                : 'hover:text-gray-900'
-            }`}
-          >
-            Dashboard
-          </button>
-
           {selectedArea && (
             <>
               <span className="text-gray-300">/</span>
