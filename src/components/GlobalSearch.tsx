@@ -47,11 +47,11 @@ export function GlobalSearch({ areas, projects, tasks, onSelectArea, onSelectPro
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-input bg-background/50 text-muted-foreground text-xs hover:bg-accent transition-colors"
+        className="flex items-center gap-2 px-4 py-2 rounded-full border border-gray-200 bg-white text-gray-600 text-sm font-medium hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all duration-200"
       >
-        <Search className="w-3.5 h-3.5" />
-        <span>Buscar…</span>
-        <kbd className="ml-2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <Search className="w-4 h-4" />
+        <span className="text-sm">Buscar…</span>
+        <kbd className="ml-auto pointer-events-none hidden sm:inline-flex h-6 select-none items-center gap-1 rounded-md border border-gray-300 bg-gray-100 px-2 font-mono text-[10px] font-medium text-gray-600">
           ⌘K
         </kbd>
       </button>

@@ -113,7 +113,7 @@ export function Navbar({
             <button
               key={id}
               onClick={() => onChangeView(id as ViewMode)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 viewMode === id
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-600 hover:bg-gray-100'
