@@ -486,13 +486,13 @@ Responde SOLO con un JSON array, sin texto adicional:
               </div>
 
               {entityImages.length > 0 && (
-                <div className="space-y-1.5 mb-2">
+                <div className="space-y-2 mb-2">
                   {entityImages.map(r => (
-                    <div key={r.id} className="relative group">
+                    <div key={r.id} className="relative group bg-secondary/50 rounded-md p-1">
                       <img
                         src={r.content}
-                        alt="Adjunto"
-                        className="w-full h-24 object-cover rounded-md"
+                        alt="Imagen adjunta"
+                        className="w-full max-h-40 object-contain rounded"
                       />
                       {onRemoveResource && (
                         <button
