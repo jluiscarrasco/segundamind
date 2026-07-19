@@ -488,11 +488,12 @@ Responde SOLO con un JSON array, sin texto adicional:
               {entityImages.length > 0 && (
                 <div className="space-y-2 mb-2">
                   {entityImages.map(r => (
-                    <div key={r.id} className="relative group bg-secondary/50 rounded-md p-1">
+                    <div key={r.id} className="relative group border border-border rounded-lg overflow-hidden">
                       <img
                         src={r.content}
                         alt="Imagen adjunta"
-                        className="w-full max-h-40 object-contain rounded"
+                        className="w-full h-auto display-block"
+                        style={{ maxHeight: '200px' }}
                       />
                       {onRemoveResource && (
                         <button
