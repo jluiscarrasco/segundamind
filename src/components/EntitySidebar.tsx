@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
+import { storage } from '@/integrations/firebase/config';
+import { uploadBytes, ref, getDownloadURL, deleteObject } from 'firebase/storage';
 import { toast } from 'sonner';
 
 export interface EntityFormData {
@@ -50,8 +52,11 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [showReplicate, setShowReplicate] = useState(false);
   const [replicateDate, setReplicateDate] = useState('');
-  const [newImage, setNewImage] = useState('');
+  const [newImage, setNewImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
   const entityNotes = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'note');
@@ -71,31 +76,44 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     setShowNoteInput(false);
   };
 
-  const handleAddImage = async () => {
-    if (!newImage || !entityId || !onAddResource) {
-      console.error('Missing required data:', { hasImage: !!newImage, entityId, hasOnAddResource: !!onAddResource });
-      return;
-    }
-    try {
-      await onAddResource({ entityType: type, entityId, type: 'image', content: newImage });
-      setNewImage('');
-      setShowImageInput(false);
-      toast.success('Imagen guardada');
-    } catch (err) {
-      console.error('Error adding image:', err);
-      toast.error('Error al guardar la imagen');
-    }
-  };
-
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 5MB');
+      return;
+    }
+    setNewImage(file);
     const reader = new FileReader();
     reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setNewImage(base64);
+      setImagePreview(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAddImage = async () => {
+    if (!newImage || !entityId || !onAddResource || !user) {
+      toast.error('Error: datos faltantes');
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const fileName = `images/${user.uid}/${Date.now()}-${newImage.name}`;
+      const fileRef = ref(storage, fileName);
+      await uploadBytes(fileRef, newImage);
+      const imageUrl = await getDownloadURL(fileRef);
+
+      await onAddResource({ entityType: type, entityId, type: 'image', content: imageUrl });
+      setNewImage(null);
+      setImagePreview('');
+      setShowImageInput(false);
+      toast.success('Imagen guardada');
+    } catch (err: any) {
+      console.error('Error adding image:', err);
+      toast.error(err.message || 'Error al guardar la imagen');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const generateSubtasksWithAI = async () => {
@@ -525,21 +543,27 @@ Responde SOLO con un JSON array, sin texto adicional:
               {showImageInput && (
                 <div className="space-y-1.5">
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleImageFileSelect}
                     className="w-full text-[10px]"
                   />
-                  {newImage && (
-                    <div className="relative bg-secondary/50 rounded-md p-1">
+                  {imagePreview && (
+                    <div className="relative border border-border rounded-lg overflow-hidden">
                       <img
-                        src={newImage}
+                        src={imagePreview}
                         alt="Vista previa"
-                        className="w-full max-h-40 object-contain rounded"
+                        className="w-full h-auto display-block"
+                        style={{ maxHeight: '200px' }}
                       />
                       <button
                         type="button"
-                        onClick={() => setNewImage('')}
+                        onClick={() => {
+                          setNewImage(null);
+                          setImagePreview('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
                         className="absolute top-1 right-1 p-1 rounded bg-black/50 hover:bg-black/70 text-white"
                       >
                         <X className="w-3 h-3" />
@@ -549,9 +573,10 @@ Responde SOLO con un JSON array, sin texto adicional:
                   <button
                     type="button"
                     onClick={handleAddImage}
-                    disabled={!newImage.trim()}
-                    className="w-full text-[10px] py-1.5 rounded-md gradient-primary text-primary-foreground disabled:opacity-40 font-medium"
+                    disabled={!newImage || uploadingImage}
+                    className="w-full text-[10px] py-1.5 rounded-md gradient-primary text-primary-foreground disabled:opacity-40 font-medium flex items-center justify-center gap-1"
                   >
+                    {uploadingImage && <Loader2 className="w-3 h-3 animate-spin" />}
                     Guardar imagen
                   </button>
                 </div>
