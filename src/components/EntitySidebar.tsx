@@ -71,11 +71,20 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     setShowNoteInput(false);
   };
 
-  const handleAddImage = () => {
-    if (!newImage.trim() || !entityId || !onAddResource) return;
-    onAddResource({ entityType: type, entityId, type: 'image', content: newImage.trim() });
-    setNewImage('');
-    setShowImageInput(false);
+  const handleAddImage = async () => {
+    if (!newImage || !entityId || !onAddResource) {
+      console.error('Missing required data:', { hasImage: !!newImage, entityId, hasOnAddResource: !!onAddResource });
+      return;
+    }
+    try {
+      await onAddResource({ entityType: type, entityId, type: 'image', content: newImage });
+      setNewImage('');
+      setShowImageInput(false);
+      toast.success('Imagen guardada');
+    } catch (err) {
+      console.error('Error adding image:', err);
+      toast.error('Error al guardar la imagen');
+    }
   };
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
