@@ -521,11 +521,11 @@ Responde SOLO con un JSON array, sin texto adicional:
                     className="w-full text-[10px]"
                   />
                   {newImage && (
-                    <div className="relative">
+                    <div className="relative bg-secondary/50 rounded-md p-1">
                       <img
                         src={newImage}
                         alt="Vista previa"
-                        className="w-full h-24 object-cover rounded-md"
+                        className="w-full max-h-40 object-contain rounded"
                       />
                       <button
                         type="button"
