@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles } from 'lucide-react';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,9 +50,12 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [showReplicate, setShowReplicate] = useState(false);
   const [replicateDate, setReplicateDate] = useState('');
+  const [newImage, setNewImage] = useState('');
+  const [showImageInput, setShowImageInput] = useState(false);
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
   const entityNotes = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'note');
+  const entityImages = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'image');
 
   const handleAddUrl = () => {
     if (!newUrl.trim() || !entityId || !onAddResource) return;
@@ -66,6 +69,24 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     onAddResource({ entityType: type, entityId, type: 'note', content: newNote.trim() });
     setNewNote('');
     setShowNoteInput(false);
+  };
+
+  const handleAddImage = () => {
+    if (!newImage.trim() || !entityId || !onAddResource) return;
+    onAddResource({ entityType: type, entityId, type: 'image', content: newImage.trim() });
+    setNewImage('');
+    setShowImageInput(false);
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setNewImage(base64);
+    };
+    reader.readAsDataURL(file);
   };
 
   const generateSubtasksWithAI = async () => {
@@ -442,6 +463,86 @@ Responde SOLO con un JSON array, sin texto adicional:
                     className="w-full text-[10px] py-1.5 rounded-md gradient-primary text-primary-foreground disabled:opacity-40 font-medium"
                   >
                     Guardar nota
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Images section */}
+          {mode === 'edit' && entityId && onAddResource && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Image className="w-3 h-3" /> Imágenes
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowImageInput(!showImageInput)}
+                  className="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5"
+                >
+                  <Plus className="w-3 h-3" /> Añadir
+                </button>
+              </div>
+
+              {entityImages.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {entityImages.map(r => (
+                    <div key={r.id} className="relative group">
+                      <img
+                        src={r.content}
+                        alt="Adjunto"
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                      {onRemoveResource && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveResource(r.id)}
+                          className="absolute top-1 right-1 p-1 rounded bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {entityImages.length === 0 && !showImageInput && (
+                <p className="text-[11px] text-muted-foreground mb-2">Sin imágenes adjuntas.</p>
+              )}
+
+              {showImageInput && (
+                <div className="space-y-1.5">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileSelect}
+                    className="w-full text-[10px]"
+                  />
+                  {newImage && (
+                    <div className="relative">
+                      <img
+                        src={newImage}
+                        alt="Vista previa"
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewImage('')}
+                        className="absolute top-1 right-1 p-1 rounded bg-black/50 hover:bg-black/70 text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddImage}
+                    disabled={!newImage.trim()}
+                    className="w-full text-[10px] py-1.5 rounded-md gradient-primary text-primary-foreground disabled:opacity-40 font-medium"
+                  >
+                    Guardar imagen
                   </button>
                 </div>
               )}
