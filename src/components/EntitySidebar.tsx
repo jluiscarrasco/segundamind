@@ -98,7 +98,7 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
     }
     setUploadingImage(true);
     try {
-      const fileName = `images/${user.uid}/${Date.now()}-${newImage.name}`;
+      const fileName = `${user.uid}/images/${Date.now()}-${newImage.name}`;
       const fileRef = ref(storage, fileName);
       await uploadBytes(fileRef, newImage);
       const imageUrl = await getDownloadURL(fileRef);
