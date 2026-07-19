@@ -308,25 +308,25 @@ export function useStore() {
       createdAt: new Date().toISOString(),
     };
 
-    // Auto-attach URL as resource if inbox item is a link
-    let newResource: Resource | null = null;
-    if (item.type === 'link') {
+    // Auto-attach URL or image as resource if inbox item is a link or image
+    const newResources: Resource[] = [];
+    if (item.type === 'link' || item.type === 'image') {
       const resDocRef = await addDoc(collection(db, 'resources'), {
         entityType: 'task',
         entityId: newTask.id,
-        type: 'link',
+        type: item.type,
         content: item.content,
         userId: user.uid,
         createdAt: serverTimestamp(),
       });
-      newResource = {
+      newResources.push({
         id: resDocRef.id,
         entityType: 'task',
         entityId: newTask.id,
-        type: 'link',
+        type: item.type,
         content: item.content,
         createdAt: new Date().toISOString(),
-      };
+      });
     }
 
     // Delete inbox item
@@ -337,7 +337,7 @@ export function useStore() {
       projects: d.projects.map(p => p.id === projectId ? { ...p, taskCounter: nextNumber } : p),
       inbox: d.inbox.filter(i => i.id !== inboxId),
       tasks: [...d.tasks, newTask],
-      resources: newResource ? [...d.resources, newResource] : d.resources,
+      resources: [...d.resources, ...newResources],
     }));
   }, [user, data.inbox, data.projects]);
 
@@ -370,7 +370,28 @@ export function useStore() {
       });
     }
 
-    // Always add note resource
+    // Add image resource if item is an image
+    if (item.type === 'image') {
+      const resDocRef = doc(collection(db, 'resources'));
+      batch.set(resDocRef, {
+        entityType,
+        entityId,
+        type: 'image',
+        content: item.content,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      newResources.push({
+        id: resDocRef.id,
+        entityType,
+        entityId,
+        type: 'image',
+        content: item.content,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    // Always add note resource (for notes and text descriptions)
     const noteDocRef = doc(collection(db, 'resources'));
     batch.set(noteDocRef, {
       entityType,
