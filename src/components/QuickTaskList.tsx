@@ -1,4 +1,4 @@
-import { Zap, AlertTriangle, Clock, CalendarOff, CheckCircle2 } from 'lucide-react';
+import { Zap, AlertTriangle, Clock, CalendarOff, CheckCircle2, Ban } from 'lucide-react';
 import type { Task, Project, Area, EntityType } from '@/types';
 import { getTaskDisplayId, getEffortLabel } from '@/types';
 import { ImportanceDot, StatusIcon } from './StatusBadges';
@@ -12,6 +12,7 @@ const VIEW_META: Record<QuickView, { Icon: typeof Zap; accent: string }> = {
   today: { Icon: Zap, accent: 'text-primary' },
   overdue: { Icon: AlertTriangle, accent: 'text-destructive' },
   waiting: { Icon: Clock, accent: 'text-status-waiting' },
+  blocked: { Icon: Ban, accent: 'text-gray-500' },
   undated: { Icon: CalendarOff, accent: 'text-muted-foreground' },
 };
 
