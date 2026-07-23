@@ -204,6 +204,19 @@ Responde SOLO con un JSON array, sin texto adicional:
     });
   };
 
+  const handleCloseTask = () => {
+    if (!name.trim()) return;
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+      importance,
+      status: 'finished',
+      reviewDate: reviewDate || null,
+      effort,
+      subtasks,
+    });
+  };
+
   const handleReplicateConfirm = () => {
     if (!name.trim() || !replicateDate || !onCloseAndReplicate) return;
     onCloseAndReplicate({
@@ -656,7 +669,7 @@ Responde SOLO con un JSON array, sin texto adicional:
         </form>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-border shrink-0">
+        <div className="px-5 py-4 border-t border-border shrink-0 space-y-2">
           <button
             onClick={handleSubmit as any}
             disabled={!name.trim()}
@@ -664,6 +677,31 @@ Responde SOLO con un JSON array, sin texto adicional:
           >
             {isEdit ? 'Guardar cambios' : `Crear ${labels[type]}`}
           </button>
+
+          {/* Task-specific footer actions */}
+          {isEdit && type === 'task' && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCloseTask}
+                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+              >
+                ✓ Cerrar
+              </button>
+              {onCloseAndReplicate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplicateDate(reviewDate || '');
+                    setShowReplicate(true);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+                >
+                  ↻ Nueva
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </motion.aside>
 
