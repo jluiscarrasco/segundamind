@@ -20,7 +20,7 @@ const VIEW_DESCRIPTIONS: Record<QuickView, string | null> = {
   today: null,
   overdue: null,
   waiting: 'Depende de OTROS. Alguien más debe hacer algo primero.',
-  blocked: 'TÚ no puedes avanzar. Falta info, recursos o decisión.',
+  blocked: 'No avanzas ahora (falta info, no es el momento, o simplemente no quieres).',
   undated: null,
 };
 
