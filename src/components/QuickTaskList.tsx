@@ -16,6 +16,14 @@ const VIEW_META: Record<QuickView, { Icon: typeof Zap; accent: string }> = {
   undated: { Icon: CalendarOff, accent: 'text-muted-foreground' },
 };
 
+const VIEW_DESCRIPTIONS: Record<QuickView, string | null> = {
+  today: null,
+  overdue: null,
+  waiting: 'Depende de OTROS. Alguien más debe hacer algo primero.',
+  blocked: 'TÚ no puedes avanzar. Falta info, recursos o decisión.',
+  undated: null,
+};
+
 interface QuickTaskListProps {
   view: QuickView;
   tasks: Task[];
@@ -45,12 +53,19 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
     return new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
   };
 
+  const description = VIEW_DESCRIPTIONS[view];
+
   return (
     <div className="bg-card rounded-xl border border-border shadow-card overflow-hidden">
-      <div className="px-5 py-3 border-b border-border flex items-center gap-2">
-        <Icon className={`w-4 h-4 ${accent}`} />
-        <h2 className="text-sm font-semibold text-foreground">{QUICK_VIEW_LABELS[view]}</h2>
-        <span className="text-[11px] text-muted-foreground">({sorted.length})</span>
+      <div className={`px-5 ${description ? 'py-2' : 'py-3'} border-b border-border flex flex-col gap-1`}>
+        <div className="flex items-center gap-2">
+          <Icon className={`w-4 h-4 ${accent}`} />
+          <h2 className="text-sm font-semibold text-foreground">{QUICK_VIEW_LABELS[view]}</h2>
+          <span className="text-[11px] text-muted-foreground">({sorted.length})</span>
+        </div>
+        {description && (
+          <p className="text-[11px] text-muted-foreground pl-6">{description}</p>
+        )}
       </div>
 
       {sorted.length === 0 ? (
