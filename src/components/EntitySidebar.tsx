@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image } from 'lucide-react';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image, HelpCircle } from 'lucide-react';
 import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
-import { IMPORTANCE_LABELS, STATUS_LABELS, EFFORT_OPTIONS } from '@/types';
+import { IMPORTANCE_LABELS, STATUS_LABELS, STATUS_DESCRIPTIONS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
 import { storage } from '@/integrations/firebase/config';
@@ -56,6 +56,7 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [imagePreview, setImagePreview] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showStatusHelp, setShowStatusHelp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
@@ -311,7 +312,17 @@ Responde SOLO con un JSON array, sin texto adicional:
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Estado</label>
+            <div className="flex items-center gap-2 mb-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex-1">Estado</label>
+              <button
+                type="button"
+                onClick={() => setShowStatusHelp(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="Ver descripciones de estados"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
             <select
               value={status}
               onChange={e => {
@@ -327,7 +338,7 @@ Responde SOLO con un JSON array, sin texto adicional:
               className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all"
             >
               {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
+                <option key={key} value={key} title={STATUS_DESCRIPTIONS[key as Status]}>{label}</option>
               ))}
               {isEdit && type === 'task' && onCloseAndReplicate && (
                 <option value="__close_new__">↻ Cerrado y nueva…</option>
@@ -745,6 +756,47 @@ Responde SOLO con un JSON array, sin texto adicional:
                 Cerrar y crear
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status help dialog */}
+      {showStatusHelp && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm"
+          onClick={() => setShowStatusHelp(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-sm mx-4 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold text-foreground">Estados de tareas</h4>
+              <button
+                type="button"
+                onClick={() => setShowStatusHelp(false)}
+                className="p-1 hover:bg-secondary rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {(Object.entries(STATUS_LABELS) as [Status, string][]).map(([key, label]) => (
+                <div key={key} className="border-l-2 border-primary/30 pl-3 py-1">
+                  <p className="text-xs font-semibold text-foreground">{label}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{STATUS_DESCRIPTIONS[key]}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowStatusHelp(false)}
+              className="w-full mt-4 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+            >
+              Entendido
+            </button>
           </div>
         </div>
       )}

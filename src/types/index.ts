@@ -115,10 +115,19 @@ export const IMPORTANCE_LABELS: Record<Importance, string> = {
 export const STATUS_LABELS: Record<Status, string> = {
   funnel: 'Embudo',
   ready: 'Listo',
-  blocked: 'Bloqueado',
-  waiting: 'Esperando',
+  blocked: '⛔ Bloqueado por mí',
+  waiting: '⏳ Esperando por otros',
   active: 'En Progreso',
   finished: 'Cerrado',
+};
+
+export const STATUS_DESCRIPTIONS: Record<Status, string> = {
+  funnel: 'Idea o tarea en revisión. No está lista aún.',
+  ready: 'Tarea lista para empezar cuando tengas tiempo.',
+  blocked: 'TÚ no puedes avanzar (falta info, recursos, decisión propia). Evita revisarlo mil veces.',
+  waiting: 'Depende de OTROS. Alguien más debe hacer algo primero. Te libera la mente.',
+  active: 'Tarea en progreso ahora mismo.',
+  finished: 'Tarea completada.',
 };
 
 /** Generate a display ID like "SEC-3" */
