@@ -6,9 +6,9 @@ export type QuickView = 'today' | 'overdue' | 'waiting' | 'undated' | 'blocked';
 export const QUICK_VIEW_LABELS: Record<QuickView, string> = {
   today: 'Hoy',
   overdue: 'Vencidas',
-  waiting: 'Esperando',
+  waiting: '⏳ Esperando por otros',
   undated: 'Sin fecha',
-  blocked: 'Bloqueado',
+  blocked: '⛔ Bloqueado por mí',
 };
 
 /** Filter tasks for a given lens. `todayKey` is the CET YYYY-MM-DD for today. */
