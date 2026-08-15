@@ -278,7 +278,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
 
       <motion.div
         initial={false}
-        animate={{ height: isOpen ? 'min(65vh, 480px)' : 'auto' }}
+        animate={{ height: isOpen ? 'min(90vh, 85vh)' : 'auto' }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden"
       >
