@@ -22,9 +22,11 @@ interface Props {
   onRemove: (id: string) => void;
   onEnrichUrl?: (inboxId: string, url: string) => void;
   onUpdateTask: (id: string, data: Partial<Task>) => void;
+  onCloseTask?: (id: string) => void;
+  onReplicateTask?: (id: string) => void;
 }
 
-export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl, onUpdateTask }: Props) {
+export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl, onUpdateTask, onCloseTask, onReplicateTask }: Props) {
   const { user, signOut: authSignOut } = useAuth();
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -460,7 +462,7 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
         )}
       </div>
 
-      <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} onUpdateTask={onUpdateTask} />
+      <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} onUpdateTask={onUpdateTask} onCloseTask={onCloseTask} onReplicateTask={onReplicateTask} />
     </div>
   );
 }

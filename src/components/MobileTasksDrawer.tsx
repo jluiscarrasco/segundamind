@@ -14,6 +14,8 @@ interface MobileTasksDrawerProps {
   projects: Project[];
   areas: Area[];
   onUpdateTask: (id: string, data: Partial<Task>) => void;
+  onCloseTask?: (id: string) => void;
+  onReplicateTask?: (id: string) => void;
 }
 
 interface DrawerItem {
@@ -26,7 +28,7 @@ interface DrawerItem {
   effort: Task['effort'];
 }
 
-export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: MobileTasksDrawerProps) {
+export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onCloseTask, onReplicateTask }: MobileTasksDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const todayKey = getTodayKeyCET();
@@ -191,6 +193,36 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask }: Mobi
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Descripción</label>
+            <Textarea
+              value={selectedTask.description || ''}
+              onChange={(e) => onUpdateTask(selectedTask.id, { description: e.target.value })}
+              placeholder="Sin descripción"
+              className="mt-0.5 text-xs h-16"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-2">
+            {onCloseTask && (
+              <button
+                onClick={() => onCloseTask(selectedTask.id)}
+                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+              >
+                ✓ Cerrar
+              </button>
+            )}
+            {onReplicateTask && (
+              <button
+                onClick={() => onReplicateTask(selectedTask.id)}
+                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+              >
+                ↻ Nueva
+              </button>
+            )}
           </div>
         </div>
       </div>
