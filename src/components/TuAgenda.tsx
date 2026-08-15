@@ -300,17 +300,16 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
               />
             </div>
 
-            {selectedTask.description && (
-              <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-1">DESCRIPCIÓN</p>
-                <textarea
-                  value={selectedTask.description}
-                  onChange={(e) => onQuickEdit?.(selectedTask.id, 'description', e.target.value)}
-                  className="w-full bg-secondary text-xs text-foreground rounded p-2 outline-none focus:ring-1 focus:ring-primary resize-none"
-                  rows={3}
-                />
-              </div>
-            )}
+            <div className="border-t border-border pt-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-1">DESCRIPCIÓN</p>
+              <textarea
+                value={selectedTask.description || ''}
+                onChange={(e) => onQuickEdit?.(selectedTask.id, 'description', e.target.value)}
+                placeholder="Sin descripción"
+                className="w-full bg-secondary text-xs text-foreground rounded p-2 outline-none focus:ring-1 focus:ring-primary resize-none"
+                rows={3}
+              />
+            </div>
 
             {/* Action buttons */}
             <div className="border-t border-border pt-3 flex gap-2">
