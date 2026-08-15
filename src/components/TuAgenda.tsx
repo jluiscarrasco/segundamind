@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle2, Edit3 } from 'lucide-react';
 import type { Task, Project, Area, Importance, EntityType, Resource } from '@/types';
 import type { ScoreBreakdown } from '@/lib/scoring';
 import { getTaskDisplayId } from '@/types';
@@ -33,9 +33,11 @@ interface TuAgendaProps {
   onEditEntity: (type: EntityType, id: string) => void;
   onPostpone: (type: 'area' | 'project' | 'task', id: string, days: number) => void;
   onQuickEdit?: (id: string, field: keyof Task, value: any) => void;
+  onCloseTask?: (id: string) => void;
+  onReplicateTask?: (id: string) => void;
 }
 
-export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit }: TuAgendaProps) {
+export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit, onCloseTask, onReplicateTask }: TuAgendaProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d' | '14d'>('24h');
 
@@ -158,7 +160,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           if (item.type === 'task') setSelectedTaskId(item.id);
           else onEditEntity(item.type, item.id);
         }}
-        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors ${
+        className={`px-4 py-2.5 flex items-center gap-2.5 cursor-pointer transition-colors relative group ${
           item.id === selectedTaskId ? 'bg-primary/10' : getRowBgColor(item, section)
         }`}
       >
@@ -190,6 +192,9 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           </>
         )}
         <span className="text-sm font-semibold text-foreground flex-1 truncate">{item.name}</span>
+        {item.id === selectedTaskId && item.type === 'task' && (
+          <Edit3 className="w-4 h-4 text-primary shrink-0" />
+        )}
       </motion.div>
     );
   };
@@ -294,12 +299,38 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                 layout="row"
               />
             </div>
+
             {selectedTask.description && (
               <div className="border-t border-border pt-3">
                 <p className="text-xs font-semibold text-muted-foreground mb-1">DESCRIPCIÓN</p>
-                <p className="text-xs text-muted-foreground">{selectedTask.description}</p>
+                <textarea
+                  value={selectedTask.description}
+                  onChange={(e) => onQuickEdit?.(selectedTask.id, 'description', e.target.value)}
+                  className="w-full bg-secondary text-xs text-foreground rounded p-2 outline-none focus:ring-1 focus:ring-primary resize-none"
+                  rows={3}
+                />
               </div>
             )}
+
+            {/* Action buttons */}
+            <div className="border-t border-border pt-3 flex gap-2">
+              {onCloseTask && (
+                <button
+                  onClick={() => onCloseTask(selectedTask.id)}
+                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+                >
+                  ✓ Cerrar
+                </button>
+              )}
+              {onReplicateTask && (
+                <button
+                  onClick={() => onReplicateTask(selectedTask.id)}
+                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+                >
+                  ↻ Nueva
+                </button>
+              )}
+            </div>
             <div className="border-t border-border pt-3">
               <p className="text-xs font-semibold text-muted-foreground mb-2">ARCHIVOS</p>
               <LinkedFilesList entityType="task" entityId={selectedTask.id} />

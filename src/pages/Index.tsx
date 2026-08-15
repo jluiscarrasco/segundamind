@@ -97,6 +97,15 @@ const Index = () => {
     store.updateTask(taskId, { [field]: value });
   }, [store]);
 
+  const handleCloseTask = useCallback((taskId: string) => {
+    store.updateTask(taskId, { status: 'finished' });
+  }, [store]);
+
+  const handleReplicateTask = useCallback((taskId: string) => {
+    setModal({ mode: 'edit', type: 'task', id: taskId });
+    // The modal will show the replicate button
+  }, []);
+
   // Keyboard shortcuts
   useKeyboardShortcut('CommandPalette', () => {
     commandPalette.toggle();
@@ -338,7 +347,7 @@ const Index = () => {
               <>
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
-                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} />
+                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} onCloseTask={handleCloseTask} onReplicateTask={handleReplicateTask} />
                   <CalendarView
                     tasks={filteredTasks}
                     projects={filteredProjects}
