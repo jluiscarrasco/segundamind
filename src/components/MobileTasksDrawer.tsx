@@ -101,13 +101,13 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
           <span className="text-sm font-medium">Volver</span>
         </button>
 
-        <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto">
+        <div className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto">
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nombre</label>
             <Input
               value={selectedTask.name}
               onChange={(e) => onUpdateTask(selectedTask.id, { name: e.target.value })}
-              className="mt-0.5 h-8 text-xs"
+              className="mt-0.5 h-7 text-xs"
             />
           </div>
 
@@ -116,7 +116,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             <select
               value={selectedTask.importance}
               onChange={(e) => onUpdateTask(selectedTask.id, { importance: e.target.value as Task['importance'] })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
+              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
             >
               {Object.entries(IMPORTANCE_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -129,7 +129,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             <select
               value={selectedTask.status}
               onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
+              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
             >
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -144,37 +144,37 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
                 type="date"
                 value={selectedTask.reviewDate || ''}
                 onChange={(e) => onUpdateTask(selectedTask.id, { reviewDate: e.target.value || null })}
-                className="h-7 text-xs flex-1"
+                className="h-6 text-xs flex-1"
               />
             </div>
-            <div className="mt-1 flex gap-1">
+            <div className="mt-0.5 flex gap-1">
               <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: addDaysCETKey(1) })}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 +1d
               </button>
               <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(5) })}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 Fri
               </button>
               <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(6) })}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 Sat
               </button>
               <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: getNextWeekday(0) })}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 Sun
               </button>
               <button
                 onClick={() => onUpdateTask(selectedTask.id, { reviewDate: addDaysCETKey(7) })}
-                className="text-[10px] font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+                className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
               >
                 +7d
               </button>
@@ -182,11 +182,11 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
           </div>
 
           <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo estimado</label>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo</label>
             <select
               value={selectedTask.effort || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
-              className="mt-0.5 w-full px-2 py-1 rounded border border-border bg-background text-foreground text-xs h-7"
+              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
             >
               <option value="">Sin estimar</option>
               {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
@@ -201,16 +201,16 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
               value={selectedTask.description || ''}
               onChange={(e) => onUpdateTask(selectedTask.id, { description: e.target.value })}
               placeholder="Sin descripción"
-              className="mt-0.5 text-xs h-16"
+              className="mt-0.5 text-xs h-12"
             />
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-1">
             {onCloseTask && (
               <button
                 onClick={() => onCloseTask(selectedTask.id)}
-                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+                className="flex-1 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
               >
                 ✓ Cerrar
               </button>
@@ -218,7 +218,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             {onReplicateTask && (
               <button
                 onClick={() => onReplicateTask(selectedTask.id)}
-                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
+                className="flex-1 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
               >
                 ↻ Nueva
               </button>
