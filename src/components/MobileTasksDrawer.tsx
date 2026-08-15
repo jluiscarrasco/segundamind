@@ -101,7 +101,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
           <span className="text-sm font-medium">Volver</span>
         </button>
 
-        <div className="flex-1 px-4 py-3 space-y-3 overflow-hidden">
+        <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto">
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Nombre</label>
             <Input
