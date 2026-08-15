@@ -95,10 +95,10 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
       <div className="flex flex-col h-full">
         <button
           onClick={() => setSelectedTaskId(null)}
-          className="flex items-center gap-2 px-4 py-3 text-primary hover:bg-secondary/30 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 text-primary hover:bg-secondary/30 transition-colors shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Volver</span>
+          <span className="text-xs font-medium">Volver</span>
         </button>
 
         <div className="flex-1 px-3 py-2 space-y-1.5 overflow-y-auto">
