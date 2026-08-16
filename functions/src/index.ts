@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import express from 'express';
+const ICalGenerator = require('ical-generator');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -1092,6 +1093,92 @@ router.post('/oauth/token', async (req, res) => {
     });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// iCal feed endpoint - generates a public calendar feed for the authenticated user
+router.get('/ical', async (req, res) => {
+  try {
+    // Verify Firebase ID token
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const token = authHeader.slice(7);
+    const decodedToken = await auth.verifyIdToken(token);
+    const userId = decodedToken.uid;
+
+    // Only allow the specific email
+    if (decodedToken.email !== 'jluis.carrasco@gmail.com') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    // Fetch all non-finished tasks with reviewDate
+    const tasksSnap = await db.collection('tasks')
+      .where('userId', '==', userId)
+      .where('status', '!=', 'finished')
+      .get();
+
+    const projectsSnap = await db.collection('projects').where('userId', '==', userId).get();
+    const areasSnap = await db.collection('areas').where('userId', '==', userId).get();
+
+    const projects = new Map(projectsSnap.docs.map(d => [d.id, d.data()]));
+    const areas = new Map(areasSnap.docs.map(d => [d.id, d.data()]));
+
+    // Create calendar
+    const cal = new ICalGenerator({
+      prodId: { company: 'MiClario', product: 'JL-Brain' },
+      name: 'Tareas - JL\'s Brain',
+      description: 'Tareas pendientes sincronizadas desde JL\'s Brain',
+      timezone: 'America/Monterrey',
+    });
+
+    // Add events for each task with reviewDate
+    tasksSnap.docs.forEach(taskDoc => {
+      const task = taskDoc.data();
+      if (!task.reviewDate) return; // Skip tasks without reviewDate
+
+      const reviewDate = task.reviewDate; // YYYY-MM-DD format
+      const startTime = task.startTime || '09:30'; // Default to 9:30 AM
+      const [hours, minutes] = startTime.split(':').map(Number);
+
+      // Calculate end time: start + effort in minutes
+      const startDateTime = new Date(`${reviewDate}T${startTime}:00`);
+      const endDateTime = new Date(startDateTime.getTime() + (task.effort || 0) * 60000);
+
+      // Get project and area info
+      const project = task.projectId ? projects.get(task.projectId) : null;
+      const area = project?.areaId ? areas.get(project.areaId) : null;
+
+      // Build description with project/area info
+      let description = task.description || '';
+      if (area || project) {
+        const hierarchy = [area?.name, project?.name].filter(Boolean).join(' › ');
+        if (hierarchy) {
+          description = `${hierarchy}\n\n${description}`.trim();
+        }
+      }
+
+      // Add event to calendar
+      cal.createEvent({
+        id: task.id,
+        start: startDateTime,
+        end: endDateTime,
+        summary: task.name,
+        description: description || '',
+        location: '',
+      });
+    });
+
+    // Send iCal file
+    res.set('Content-Type', 'text/calendar; charset=utf-8');
+    res.set('Content-Disposition', 'attachment; filename="jl-brain-tasks.ics"');
+    res.send(cal.toString());
+  } catch (error: any) {
+    console.error('[iCal] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
