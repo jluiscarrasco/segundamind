@@ -181,6 +181,29 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             </div>
           </div>
 
+          {/* Start time */}
+          <div>
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Hora de Inicio</label>
+            <input
+              type="time"
+              value={selectedTask.startTime || ''}
+              onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value || null })}
+              disabled={!selectedTask.reviewDate}
+              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6 disabled:opacity-50"
+            />
+            {selectedTask.reviewDate && selectedTask.startTime && selectedTask.effort && (
+              <p className="text-[9px] text-muted-foreground mt-1">
+                Fin: {(() => {
+                  const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
+                  const startDate = new Date();
+                  startDate.setHours(hours, minutes, 0, 0);
+                  const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
+                  return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+                })()}
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo</label>
             <select
