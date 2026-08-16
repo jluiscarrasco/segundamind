@@ -1146,18 +1146,15 @@ router.get('/ical', async (req, res) => {
       return;
     }
 
-    // Look up user by iCal token
-    const tokenSnap = await db.collection('ical_tokens')
-      .where('token', '==', icalToken)
-      .limit(1)
-      .get();
+    // Look up user by iCal token (token is stored as document ID)
+    const tokenSnap = await db.collection('ical_tokens').doc(icalToken).get();
 
-    if (tokenSnap.empty) {
+    if (!tokenSnap.exists) {
       res.status(403).json({ error: 'Invalid iCal token' });
       return;
     }
 
-    const userId = tokenSnap.docs[0].data().userId;
+    const userId = tokenSnap.data()!.userId;
 
     // Fetch all non-finished tasks with reviewDate
     const tasksSnap = await db.collection('tasks')

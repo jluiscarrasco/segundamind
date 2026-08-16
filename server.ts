@@ -681,9 +681,46 @@ app.post('/api/ical-token', async (req, res) => {
   }
 });
 
-// iCal feed endpoint (dev stub)
+// iCal feed endpoint (dev stub - returns sample iCal)
 app.get('/api/ical', async (req, res) => {
-  res.status(501).json({ error: 'iCal feed not yet implemented on dev server. Use Vercel in production.' });
+  try {
+    const token = req.query.token as string;
+
+    if (!token) {
+      res.status(401).json({ error: 'Missing iCal token' });
+      return;
+    }
+
+    // Dev mode: accept any token and return sample iCal
+    if (!token.startsWith('dev-test-token-')) {
+      res.status(403).json({ error: 'Invalid iCal token' });
+      return;
+    }
+
+    // Sample iCal response for testing
+    const iCalContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//MiClario//JL-Brain//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Tareas - JL's Brain
+X-WR-TIMEZONE:America/Monterrey
+BEGIN:VEVENT
+UID:dev-task-001@joseluiscarrasco.com
+DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
+DTSTART:20260816T093000
+DTEND:20260816T094500
+SUMMARY:Instalación de mesa para ordenador en el garaje
+DESCRIPTION:Estado: Embudо\\nEsfuerzo: 25 min
+END:VEVENT
+END:VCALENDAR`;
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="jl-brain-tasks.ics"');
+    res.send(iCalContent);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Placeholder routes for other functions

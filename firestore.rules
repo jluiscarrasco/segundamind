@@ -94,6 +94,12 @@ service cloud.firestore {
       allow update: if ownsExisting() && ownsIncoming();
     }
 
+    match /ical_tokens/{id} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsIncoming();
+      allow update: if ownsExisting() && ownsIncoming();
+    }
+
     // --- ADMIN DATA (service role / Cloud Functions only) ---
     match /allowed_emails/{document=**} {
       allow read, write: if false;
