@@ -1169,26 +1169,48 @@ router.get('/ical', async (req, res) => {
     const projects = new Map(projectsSnap.docs.map(d => [d.id, d.data()]));
     const areas = new Map(areasSnap.docs.map(d => [d.id, d.data()]));
 
-    // Create calendar
+    // Create calendar (Europe/Madrid — user is in Spain)
     const cal = ical({
       prodId: { company: 'MiClario', product: 'JL-Brain' },
       name: 'Tareas - JL\'s Brain',
       description: 'Tareas pendientes sincronizadas desde JL\'s Brain',
-      timezone: 'America/Monterrey',
+      timezone: 'Europe/Madrid',
     });
 
     // Add events for each task with reviewDate
+    let eventCount = 0;
+    let skippedNoDate = 0;
     tasksSnap.docs.forEach(taskDoc => {
       const task = taskDoc.data();
-      if (!task.reviewDate) return; // Skip tasks without reviewDate
+      if (!task.reviewDate) {
+        skippedNoDate++;
+        return;
+      }
 
-      const reviewDate = task.reviewDate; // YYYY-MM-DD format
+      // Normalize reviewDate — may be Firestore Timestamp or YYYY-MM-DD string
+      let reviewDate: string;
+      if (typeof task.reviewDate === 'string') {
+        reviewDate = task.reviewDate;
+      } else if (task.reviewDate?.toDate) {
+        // Firestore Timestamp
+        reviewDate = task.reviewDate.toDate().toISOString().split('T')[0];
+      } else {
+        console.warn(`[iCal] Task ${taskDoc.id} has invalid reviewDate:`, task.reviewDate);
+        return;
+      }
+
       const startTime = task.startTime || '09:30'; // Default to 9:30 AM
-      const [hours, minutes] = startTime.split(':').map(Number);
+      const effortMinutes = Number(task.effort) || 30; // Default 30 min if no effort
 
-      // Calculate end time: start + effort in minutes
+      // Calculate end time as floating local time (no timezone info)
+      // The event will be interpreted in the calendar's Europe/Madrid timezone
+      const [startH, startM] = startTime.split(':').map(Number);
       const startDateTime = new Date(`${reviewDate}T${startTime}:00`);
-      const endDateTime = new Date(startDateTime.getTime() + (task.effort || 0) * 60000);
+      const endTotalMinutes = startH * 60 + startM + effortMinutes;
+      const endH = Math.floor(endTotalMinutes / 60) % 24;
+      const endM = endTotalMinutes % 60;
+      const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+      const endDateTime = new Date(`${reviewDate}T${endTime}:00`);
 
       // Get project and area info
       const project = task.projectId ? projects.get(task.projectId) : null;
@@ -1203,20 +1225,28 @@ router.get('/ical', async (req, res) => {
         }
       }
 
-      // Add event to calendar
+      // Add event to calendar (floating: interpreted in viewer's local time)
       cal.createEvent({
-        id: task.id,
+        id: taskDoc.id,
         start: startDateTime,
         end: endDateTime,
-        summary: task.name,
+        floating: true,
+        summary: task.name || '(sin título)',
         description: description || '',
         location: '',
+        url: `https://brain.joseluiscarrasco.com/?task=${taskDoc.id}`,
       });
+      eventCount++;
     });
 
-    // Send iCal file
+    console.log(`[iCal] Generated ${eventCount} events for user ${userId} (${tasksSnap.size} tasks total, ${skippedNoDate} skipped no date)`);
+
+    // Send iCal file (no cache — always serve fresh data)
     res.set('Content-Type', 'text/calendar; charset=utf-8');
     res.set('Content-Disposition', 'attachment; filename="jl-brain-tasks.ics"');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     res.send(cal.toString());
   } catch (error: any) {
     console.error('[iCal] Error:', error);

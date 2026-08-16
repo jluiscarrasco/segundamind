@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Navbar } from '@/components/Navbar';
@@ -91,6 +91,18 @@ const Index = () => {
   const handleEditEntity = useCallback((type: EntityType, id: string) => {
     setModal({ mode: 'edit', type, id });
   }, []);
+
+  // Open task from URL parameter (e.g., ?task=<id> from calendar deep link)
+  useEffect(() => {
+    if (store.tasks.length === 0) return; // Wait until tasks are loaded
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('task');
+    if (taskId && store.tasks.some(t => t.id === taskId)) {
+      setModal({ mode: 'edit', type: 'task', id: taskId });
+      // Clean URL to avoid re-opening on refresh
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [store.tasks]);
 
   // Quick inline edit handler (for status, importance, date, effort - Phase 2)
   const handleQuickEditTask = useCallback((taskId: string, field: keyof typeof store.tasks[0], value: any) => {
