@@ -78,14 +78,6 @@ export function QuickTaskEdit({ task, projects, areas, onUpdate, layout = 'hover
           >
             +1d
           </button>
-          <button
-            type="button"
-            onClick={() => onUpdate('reviewDate', addDaysCETKey(7))}
-            className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors"
-            title="Posponerse 7 días"
-          >
-            +7d
-          </button>
         </div>
       </div>
 
