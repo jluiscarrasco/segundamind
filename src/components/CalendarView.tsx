@@ -15,6 +15,7 @@ interface CalendarItem {
   id: string;
   name: string;
   date: string;
+  startTime?: string | null;
   importance: Task['importance'];
   status: Task['status'];
   displayId?: string;
@@ -22,6 +23,8 @@ interface CalendarItem {
   description?: string;
   score: number;
 }
+
+const DEFAULT_START_TIME = '09:30';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -74,6 +77,7 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
         const area = project ? areas.find(a => a.id === project.areaId) : null;
         items.push({
           type: 'task', id: t.id, name: t.name, date: t.reviewDate,
+          startTime: t.startTime,
           importance: t.importance, status: t.status,
           displayId: getTaskDisplayId(projects, t),
           parentInfo: [area?.name, project?.name].filter(Boolean).join(' › '),
@@ -147,8 +151,14 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
       if (!map[item.date]) map[item.date] = [];
       map[item.date].push(item);
     });
-    // Sort items within each day by score descending
-    Object.values(map).forEach(arr => arr.sort((a, b) => b.score - a.score));
+    // Sort items within each day by start time (default 09:30 when empty),
+    // breaking ties by score descending.
+    Object.values(map).forEach(arr => arr.sort((a, b) => {
+      const ta = a.startTime || DEFAULT_START_TIME;
+      const tb = b.startTime || DEFAULT_START_TIME;
+      if (ta !== tb) return ta.localeCompare(tb);
+      return b.score - a.score;
+    }));
     return map;
   }, [allItems]);
 
@@ -344,6 +354,13 @@ export function CalendarView({ tasks, projects, areas, onEditEntity, onPostpone,
                                 : 'bg-secondary/40 hover:bg-secondary/70 text-foreground'
                           }`}
                         >
+                          {item.type === 'task' && (
+                            <span className={`font-mono text-[9px] font-semibold shrink-0 tabular-nums ${
+                              item.startTime ? 'text-foreground/70' : 'text-muted-foreground/50'
+                            }`}>
+                              {item.startTime || DEFAULT_START_TIME}
+                            </span>
+                          )}
                           {item.displayId && (
                             <span className="font-mono text-[8px] font-semibold text-muted-foreground shrink-0">
                               {item.displayId}
