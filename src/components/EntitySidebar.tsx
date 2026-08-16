@@ -15,6 +15,7 @@ export interface EntityFormData {
   importance: Importance;
   status: Status;
   reviewDate: string | null;
+  startTime: string | null;
   effort?: Effort;
   subtasks?: Subtask[];
 }
@@ -43,6 +44,7 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [importance, setImportance] = useState<Importance>(initialData?.importance || 'normal');
   const [status, setStatus] = useState<Status>(initialData?.status || 'funnel');
   const [reviewDate, setReviewDate] = useState(initialData?.reviewDate || '');
+  const [startTime, setStartTime] = useState(initialData?.startTime || '');
   const [effort, setEffort] = useState<Effort>(initialData?.effort ?? null);
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialData?.subtasks ?? []);
   const [generatingAI, setGeneratingAI] = useState(false);
@@ -186,8 +188,9 @@ Responde SOLO con un JSON array, sin texto adicional:
     setImportance(initialData?.importance || 'normal');
     setStatus(initialData?.status || 'funnel');
     setReviewDate(initialData?.reviewDate || '');
+    setStartTime(initialData?.startTime || '');
     setEffort(initialData?.effort ?? null);
-  }, [initialData?.name, initialData?.description, initialData?.importance, initialData?.status, initialData?.reviewDate, initialData?.effort]);
+  }, [initialData?.name, initialData?.description, initialData?.importance, initialData?.status, initialData?.reviewDate, initialData?.startTime, initialData?.effort]);
 
   const labels = { area: 'Área', project: 'Proyecto', task: 'Tarea' };
   const isEdit = mode === 'edit';
@@ -201,6 +204,7 @@ Responde SOLO con un JSON array, sin texto adicional:
       importance,
       status,
       reviewDate: reviewDate || null,
+      startTime: startTime || null,
       ...(type === 'task' ? { effort, subtasks } : {})
     });
   };
@@ -355,6 +359,31 @@ Responde SOLO con un JSON array, sin texto adicional:
               className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
+
+          {/* Start time - only for tasks */}
+          {type === 'task' && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">Hora de Inicio (opcional)</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={e => setStartTime(e.target.value)}
+                disabled={!reviewDate}
+                className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all disabled:opacity-50"
+              />
+              {reviewDate && startTime && effort && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Fin: {(() => {
+                    const [hours, minutes] = startTime.split(':').map(Number);
+                    const startDate = new Date();
+                    startDate.setHours(hours, minutes, 0, 0);
+                    const endDate = new Date(startDate.getTime() + (effort || 0) * 60000);
+                    return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+                  })()}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Effort slider - only for tasks */}
           {type === 'task' && (

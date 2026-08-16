@@ -66,6 +66,7 @@ export interface Task {
   importance: Importance;
   effort: Effort;
   reviewDate: string | null;
+  startTime: string | null; // HH:mm format (e.g. "09:30"), only valid if reviewDate is set
   subtasks?: Subtask[];
   createdAt: string;
 }
