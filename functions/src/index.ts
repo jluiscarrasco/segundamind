@@ -3,7 +3,8 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import express from 'express';
-const ICalGenerator = require('ical-generator');
+// @ts-ignore
+import ical from 'ical-generator';
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -1169,7 +1170,7 @@ router.get('/ical', async (req, res) => {
     const areas = new Map(areasSnap.docs.map(d => [d.id, d.data()]));
 
     // Create calendar
-    const cal = new ICalGenerator({
+    const cal = ical({
       prodId: { company: 'MiClario', product: 'JL-Brain' },
       name: 'Tareas - JL\'s Brain',
       description: 'Tareas pendientes sincronizadas desde JL\'s Brain',
