@@ -341,25 +341,6 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="border-t border-border pt-3 flex gap-2">
-              {onCloseTask && (
-                <button
-                  onClick={() => onCloseTask(selectedTask.id)}
-                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-                >
-                  ✓ Cerrar
-                </button>
-              )}
-              {onReplicateTask && (
-                <button
-                  onClick={() => onReplicateTask(selectedTask.id)}
-                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-                >
-                  ↻ Nueva
-                </button>
-              )}
-            </div>
             <div className="border-t border-border pt-3">
               <p className="text-xs font-semibold text-muted-foreground mb-2">ARCHIVOS</p>
               <LinkedFilesList entityType="task" entityId={selectedTask.id} />
