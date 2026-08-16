@@ -1159,7 +1159,7 @@ router.get('/ical', async (req, res) => {
     // Fetch all non-finished tasks with reviewDate
     const tasksSnap = await db.collection('tasks')
       .where('userId', '==', userId)
-      .where('status', '!=', 'finished')
+      .where('status', 'in', ['funnel', 'ready', 'blocked', 'waiting', 'active'])
       .get();
 
     const projectsSnap = await db.collection('projects').where('userId', '==', userId).get();
