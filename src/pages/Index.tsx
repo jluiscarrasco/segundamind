@@ -101,10 +101,24 @@ const Index = () => {
     store.updateTask(taskId, { status: 'finished' });
   }, [store]);
 
-  const handleReplicateTask = useCallback((taskId: string) => {
-    setModal({ mode: 'edit', type: 'task', id: taskId });
-    // The modal will show the replicate button
-  }, []);
+  const handleCloseAndReplicateQuick = useCallback((taskId: string, newReviewDate: string) => {
+    const task = store.tasks.find(t => t.id === taskId);
+    if (task) {
+      // Close the current task
+      store.updateTask(taskId, { status: 'finished' });
+      // Create a new task with the same properties but new date
+      store.createTask(task.projectId, {
+        name: task.name,
+        description: task.description,
+        importance: task.importance,
+        status: 'ready',
+        reviewDate: newReviewDate,
+        effort: task.effort,
+        startTime: task.startTime,
+      });
+      toast.success('Tarea cerrada y nueva tarea creada');
+    }
+  }, [store]);
 
   // Keyboard shortcuts
   useKeyboardShortcut('CommandPalette', () => {
@@ -348,7 +362,7 @@ const Index = () => {
               <>
                 {/* Tu Agenda - unified view */}
                 <div className="space-y-4">
-                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} onCloseTask={handleCloseTask} onReplicateTask={handleReplicateTask} />
+                  <TuAgenda tasks={filteredTasks} projects={filteredProjects} areas={filteredAreas} resources={store.resources} onEditEntity={handleEditEntity} onPostpone={handlePostpone} onQuickEdit={handleQuickEditTask} onCloseAndReplicate={handleCloseAndReplicateQuick} />
                   <CalendarView
                     tasks={filteredTasks}
                     projects={filteredProjects}

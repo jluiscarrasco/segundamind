@@ -33,11 +33,10 @@ interface TuAgendaProps {
   onEditEntity: (type: EntityType, id: string) => void;
   onPostpone: (type: 'area' | 'project' | 'task', id: string, days: number) => void;
   onQuickEdit?: (id: string, field: keyof Task, value: any) => void;
-  onCloseTask?: (id: string) => void;
-  onReplicateTask?: (id: string) => void;
+  onCloseAndReplicate?: (taskId: string, newReviewDate: string) => void;
 }
 
-export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit, onCloseTask, onReplicateTask }: TuAgendaProps) {
+export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPostpone, onQuickEdit, onCloseAndReplicate }: TuAgendaProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'24h' | '48h' | '7d' | '14d'>('24h');
 
@@ -306,6 +305,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                 areas={areas}
                 onUpdate={(field, value) => onQuickEdit(selectedTask.id, field, value)}
                 layout="row"
+                onCloseAndReplicate={onCloseAndReplicate ? (newDate) => onCloseAndReplicate(selectedTask.id, newDate) : undefined}
               />
             </div>
 
