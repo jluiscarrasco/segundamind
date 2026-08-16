@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, Copy, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface CalendarFeedDialogProps {
@@ -11,11 +11,36 @@ interface CalendarFeedDialogProps {
 
 export function CalendarFeedDialog({ open, onOpenChange, authToken }: CalendarFeedDialogProps) {
   const [copied, setCopied] = useState(false);
+  const [feedUrl, setFeedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  const feedUrl = authToken && user
-    ? `${window.location.origin}/api/ical`
-    : null;
+  useEffect(() => {
+    if (open && authToken && !feedUrl && !loading) {
+      generateICalToken();
+    }
+  }, [open, authToken, feedUrl, loading]);
+
+  const generateICalToken = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`${window.location.origin}/api/ical-token`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to generate iCal token');
+      const data = await response.json();
+      setFeedUrl(data.feedUrl);
+    } catch (error) {
+      console.error('Error generating iCal token:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCopyUrl = () => {
     if (feedUrl) {
@@ -87,7 +112,12 @@ export function CalendarFeedDialog({ open, onOpenChange, authToken }: CalendarFe
           {/* Feed URL section */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground">URL DEL CALENDARIO</label>
-            {feedUrl ? (
+            {loading ? (
+              <div className="text-xs text-muted-foreground flex gap-2 items-center">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generando token...
+              </div>
+            ) : feedUrl ? (
               <div className="flex gap-2">
                 <input
                   type="text"

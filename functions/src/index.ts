@@ -1096,24 +1096,68 @@ router.post('/oauth/token', async (req, res) => {
   }
 });
 
-// iCal feed endpoint - generates a public calendar feed for the authenticated user
-router.get('/ical', async (req, res) => {
+// Generate iCal token endpoint
+router.post('/ical-token', async (req, res) => {
   try {
-    // Verify Firebase ID token
     const authHeader = req.headers.authorization || '';
     if (!authHeader.startsWith('Bearer ')) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
+
     const token = authHeader.slice(7);
     const decodedToken = await auth.verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     // Only allow the specific email
     if (decodedToken.email !== 'jluis.carrasco@gmail.com') {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
+
+    // Generate unique token (random 32 chars)
+    const crypto = require('crypto');
+    const icalToken = crypto.randomBytes(16).toString('hex');
+
+    // Store token in database
+    await db.collection('ical_tokens').doc(icalToken).set({
+      userId: decodedToken.uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Return the token and the iCal feed URL
+    const feedUrl = `${req.protocol}://${req.get('host')}/api/ical?token=${icalToken}`;
+    res.json({
+      token: icalToken,
+      feedUrl: feedUrl,
+    });
+  } catch (error: any) {
+    console.error('[iCal Token] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// iCal feed endpoint - generates a public calendar feed using iCal token
+router.get('/ical', async (req, res) => {
+  try {
+    const icalToken = req.query.token as string;
+
+    if (!icalToken) {
+      res.status(401).json({ error: 'Missing iCal token' });
+      return;
+    }
+
+    // Look up user by iCal token
+    const tokenSnap = await db.collection('ical_tokens')
+      .where('token', '==', icalToken)
+      .limit(1)
+      .get();
+
+    if (tokenSnap.empty) {
+      res.status(403).json({ error: 'Invalid iCal token' });
+      return;
+    }
+
+    const userId = tokenSnap.docs[0].data().userId;
 
     // Fetch all non-finished tasks with reviewDate
     const tasksSnap = await db.collection('tasks')
