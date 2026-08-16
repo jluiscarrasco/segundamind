@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://us-central1-secondbrain-765b9.cloudfunctions.net/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
