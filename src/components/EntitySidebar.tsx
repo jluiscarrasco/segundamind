@@ -718,30 +718,6 @@ Responde SOLO con un JSON array, sin texto adicional:
             {isEdit ? 'Guardar cambios' : `Crear ${labels[type]}`}
           </button>
 
-          {/* Task-specific footer actions */}
-          {isEdit && type === 'task' && (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleCloseTask}
-                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-              >
-                ✓ Cerrar
-              </button>
-              {onCloseAndReplicate && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReplicateDate(reviewDate || '');
-                    setShowReplicate(true);
-                  }}
-                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-                >
-                  ↻ Nueva
-                </button>
-              )}
-            </div>
-          )}
         </div>
       </motion.aside>
 
