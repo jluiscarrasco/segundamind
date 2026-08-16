@@ -150,8 +150,7 @@ const Index = () => {
         onRemove={store.removeInboxItem}
         onEnrichUrl={store.enrichUrlInboxItem}
         onUpdateTask={store.updateTask}
-        onCloseTask={handleCloseTask}
-        onReplicateTask={handleReplicateTask}
+        onOpenDetail={(taskId) => handleEditEntity('task', taskId)}
       />
     );
   }

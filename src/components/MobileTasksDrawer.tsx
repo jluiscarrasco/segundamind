@@ -14,8 +14,7 @@ interface MobileTasksDrawerProps {
   projects: Project[];
   areas: Area[];
   onUpdateTask: (id: string, data: Partial<Task>) => void;
-  onCloseTask?: (id: string) => void;
-  onReplicateTask?: (id: string) => void;
+  onOpenDetail?: (id: string) => void;
 }
 
 interface DrawerItem {
@@ -28,7 +27,7 @@ interface DrawerItem {
   effort: Task['effort'];
 }
 
-export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onCloseTask, onReplicateTask }: MobileTasksDrawerProps) {
+export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onOpenDetail }: MobileTasksDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const todayKey = getTodayKeyCET();
@@ -124,18 +123,59 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             </select>
           </div>
 
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Estado</label>
-            <select
-              value={selectedTask.status}
-              onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
-              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
-            >
-              {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
+          {/* Estado, Hora de Inicio, Esfuerzo - Row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Estado</label>
+              <select
+                value={selectedTask.status}
+                onChange={(e) => onUpdateTask(selectedTask.id, { status: e.target.value as Task['status'] })}
+                className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
+              >
+                {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Hora Inicio</label>
+              <input
+                type="time"
+                value={selectedTask.startTime || ''}
+                onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value || null })}
+                disabled={!selectedTask.reviewDate}
+                className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6 disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo</label>
+              <select
+                value={selectedTask.effort || ''}
+                onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
+                className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
+              >
+                <option value="">-</option>
+                {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* End time hint */}
+          {selectedTask.reviewDate && selectedTask.startTime && selectedTask.effort && (
+            <p className="text-[9px] text-muted-foreground">
+              Fin: {(() => {
+                const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
+                const startDate = new Date();
+                startDate.setHours(hours, minutes, 0, 0);
+                const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
+                return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+              })()}
+            </p>
+          )}
 
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Fecha de revisión</label>
@@ -181,43 +221,6 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             </div>
           </div>
 
-          {/* Start time */}
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Hora de Inicio</label>
-            <input
-              type="time"
-              value={selectedTask.startTime || ''}
-              onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value || null })}
-              disabled={!selectedTask.reviewDate}
-              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6 disabled:opacity-50"
-            />
-            {selectedTask.reviewDate && selectedTask.startTime && selectedTask.effort && (
-              <p className="text-[9px] text-muted-foreground mt-1">
-                Fin: {(() => {
-                  const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
-                  const startDate = new Date();
-                  startDate.setHours(hours, minutes, 0, 0);
-                  const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
-                  return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
-                })()}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="text-[10px] font-semibold text-muted-foreground uppercase">Esfuerzo</label>
-            <select
-              value={selectedTask.effort || ''}
-              onChange={(e) => onUpdateTask(selectedTask.id, { effort: e.target.value ? parseInt(e.target.value) : null })}
-              className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6"
-            >
-              <option value="">Sin estimar</option>
-              {EFFORT_OPTIONS.filter(o => o.value !== null).map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="text-[10px] font-semibold text-muted-foreground uppercase">Descripción</label>
             <Textarea
@@ -228,25 +231,15 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onClos
             />
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-1">
-            {onCloseTask && (
-              <button
-                onClick={() => onCloseTask(selectedTask.id)}
-                className="flex-1 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-              >
-                ✓ Cerrar
-              </button>
-            )}
-            {onReplicateTask && (
-              <button
-                onClick={() => onReplicateTask(selectedTask.id)}
-                className="flex-1 py-1.5 rounded-lg bg-secondary text-xs font-medium text-foreground hover:bg-secondary/80 transition-all"
-              >
-                ↻ Nueva
-              </button>
-            )}
-          </div>
+          {/* View detail button */}
+          {onOpenDetail && (
+            <button
+              onClick={() => onOpenDetail(selectedTask.id)}
+              className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-all"
+            >
+              → Ver detalle completo
+            </button>
+          )}
         </div>
       </div>
     );
