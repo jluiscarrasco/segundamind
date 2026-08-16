@@ -19,6 +19,7 @@ import {
   CalendarOff,
   Inbox,
   Ban,
+  Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +32,7 @@ import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { McpAccessDialog } from "./McpAccessDialog";
 import { Plug } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { CalendarFeedDialog } from "./CalendarFeedDialog";
 
 interface AppSidebarProps {
   areas: Area[];
@@ -99,6 +101,8 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(areas.map((a) => a.id)));
   const [showSettings, setShowSettings] = useState(false);
+  const [showCalendarDialog, setShowCalendarDialog] = useState(false);
+  const { user } = useAuth();
   const todayKey = getTodayKeyCET();
 
   const toggleArea = (id: string) => {
@@ -287,6 +291,13 @@ export function AppSidebar({
             </button>
           </McpAccessDialog>
           <button
+            onClick={() => setShowCalendarDialog(true)}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5"
+            title="Calendario público"
+          >
+            <Calendar className="w-4 h-4" />
+          </button>
+          <button
             onClick={() => setShowSettings(!showSettings)}
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition-colors p-1.5 ml-auto"
             title="Ajustes"
@@ -296,6 +307,13 @@ export function AppSidebar({
           <SignOutButton />
         </div>
       </div>
+
+      {/* Calendar Feed Dialog */}
+      <CalendarFeedDialog
+        open={showCalendarDialog}
+        onOpenChange={setShowCalendarDialog}
+        authToken={user?.uid || null}
+      />
     </aside>
   );
 
