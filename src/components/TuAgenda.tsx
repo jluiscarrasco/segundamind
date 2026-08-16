@@ -311,33 +311,41 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
               />
             </div>
 
-            {/* Time section */}
+            {/* Time section - inline with review date */}
             {selectedTask.reviewDate && (
               <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">HORARIO</p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                   <div>
-                    <label className="text-[10px] text-muted-foreground">Hora de Inicio</label>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">FECHA</p>
+                    <input
+                      type="date"
+                      value={selectedTask.reviewDate}
+                      onChange={(e) => onQuickEdit?.(selectedTask.id, 'reviewDate', e.target.value || null)}
+                      className="w-full text-xs px-2 py-1 rounded bg-secondary text-foreground outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">HORA INICIO</p>
                     <input
                       type="time"
                       value={selectedTask.startTime || ''}
                       onChange={(e) => onQuickEdit?.(selectedTask.id, 'startTime', e.target.value || null)}
-                      className="w-full bg-secondary text-xs text-foreground rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full text-xs px-2 py-1 rounded bg-secondary text-foreground outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
-                  {selectedTask.startTime && selectedTask.effort && (
-                    <div className="text-xs text-muted-foreground p-2 bg-secondary/50 rounded">
-                      Fin: {(() => {
-                        const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
-                        const startDate = new Date();
-                        startDate.setHours(hours, minutes, 0, 0);
-                        const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
-                        return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
-                      })()}
-                      (${selectedTask.effort < 60 ? `${selectedTask.effort}m` : `${Math.round(selectedTask.effort / 6) / 10}h`})
-                    </div>
-                  )}
                 </div>
+                {selectedTask.startTime && selectedTask.effort && (
+                  <div className="text-xs text-muted-foreground p-2 bg-secondary/50 rounded">
+                    Fin: {(() => {
+                      const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
+                      const startDate = new Date();
+                      startDate.setHours(hours, minutes, 0, 0);
+                      const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
+                      return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+                    })()}
+                    (${selectedTask.effort < 60 ? `${selectedTask.effort}m` : `${Math.round(selectedTask.effort / 6) / 10}h`})
+                  </div>
+                )}
               </div>
             )}
 
