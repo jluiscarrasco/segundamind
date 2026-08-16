@@ -666,6 +666,26 @@ Responde de forma concisa y útil. Cuando el usuario pida crear/actualizar eleme
   }
 });
 
+// iCal token endpoint (dev stub - returns demo token)
+app.post('/api/ical-token', async (req, res) => {
+  try {
+    const demoToken = 'dev-test-token-' + Math.random().toString(36).slice(2);
+    const feedUrl = `http://localhost:8082/api/ical?token=${demoToken}`;
+    res.json({
+      token: demoToken,
+      feedUrl: feedUrl,
+      _note: 'Dev mode - returns demo token. Use Vercel in production for real tokens.'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// iCal feed endpoint (dev stub)
+app.get('/api/ical', async (req, res) => {
+  res.status(501).json({ error: 'iCal feed not yet implemented on dev server. Use Vercel in production.' });
+});
+
 // Placeholder routes for other functions
 ['wiki-generate', 'wiki-edit', 'wiki-chat', 'wiki-suggest-structure'].forEach(path => {
   app.post(`/api/${path}`, async (req, res) => {
