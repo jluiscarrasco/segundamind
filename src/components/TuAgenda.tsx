@@ -311,6 +311,36 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
               />
             </div>
 
+            {/* Time section */}
+            {selectedTask.reviewDate && (
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">HORARIO</p>
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Hora de Inicio</label>
+                    <input
+                      type="time"
+                      value={selectedTask.startTime || ''}
+                      onChange={(e) => onQuickEdit?.(selectedTask.id, 'startTime', e.target.value || null)}
+                      className="w-full bg-secondary text-xs text-foreground rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  {selectedTask.startTime && selectedTask.effort && (
+                    <div className="text-xs text-muted-foreground p-2 bg-secondary/50 rounded">
+                      Fin: {(() => {
+                        const [hours, minutes] = selectedTask.startTime.split(':').map(Number);
+                        const startDate = new Date();
+                        startDate.setHours(hours, minutes, 0, 0);
+                        const endDate = new Date(startDate.getTime() + (selectedTask.effort || 0) * 60000);
+                        return `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+                      })()}
+                      (${selectedTask.effort < 60 ? `${selectedTask.effort}m` : `${Math.round(selectedTask.effort / 6) / 10}h`})
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="border-t border-border pt-3 flex gap-2">
               {onCloseTask && (
