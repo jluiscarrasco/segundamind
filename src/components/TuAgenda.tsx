@@ -263,28 +263,37 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
           <div className="w-1/2 overflow-y-auto p-4 space-y-4">
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-2">TAREA</p>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground flex-1">{selectedTask.name}</p>
-                {(() => {
-                  const breakdown = scoreTaskDetailed(selectedTask, projects, areas);
-                  return (
-                    <div
-                      title={[
-                        breakdown.baseLabel,
-                        breakdown.urgencyLabel,
-                        breakdown.cascadeLabel,
-                        breakdown.multiplierLabel
-                      ].filter(Boolean).join('\n')}
-                      className={`text-xs font-bold px-2 py-1 rounded cursor-help flex-shrink-0 ${
-                        breakdown.total >= 100 ? 'bg-destructive/15 text-destructive' :
-                        breakdown.total >= 60 ? 'bg-orange-500/15 text-orange-600' :
-                        breakdown.total >= 30 ? 'bg-primary/10 text-primary' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
-                      {breakdown.total}
-                    </div>
-                  );
-                })()}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {(() => {
+                    const breakdown = scoreTaskDetailed(selectedTask, projects, areas);
+                    return (
+                      <div
+                        title={[
+                          breakdown.baseLabel,
+                          breakdown.urgencyLabel,
+                          breakdown.cascadeLabel,
+                          breakdown.multiplierLabel
+                        ].filter(Boolean).join('\n')}
+                        className={`text-xs font-bold px-2 py-1 rounded cursor-help ${
+                          breakdown.total >= 100 ? 'bg-destructive/15 text-destructive' :
+                          breakdown.total >= 60 ? 'bg-orange-500/15 text-orange-600' :
+                          breakdown.total >= 30 ? 'bg-primary/10 text-primary' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                        {breakdown.total}
+                      </div>
+                    );
+                  })()}
+                  <button
+                    onClick={() => onEditEntity('task', selectedTask.id)}
+                    className="text-xs font-bold px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    title="Ver detalle completo"
+                  >
+                    →
+                  </button>
+                </div>
               </div>
             </div>
             <div
