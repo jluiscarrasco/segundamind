@@ -1,11 +1,12 @@
 import type { Task } from '@/types';
 
 /** Cross-area "lenses" shown in the sidebar. Inbox is handled separately (opens its panel). */
-export type QuickView = 'today' | 'overdue' | 'waiting' | 'undated' | 'blocked';
+export type QuickView = 'today' | 'overdue' | 'scheduled' | 'waiting' | 'undated' | 'blocked';
 
 export const QUICK_VIEW_LABELS: Record<QuickView, string> = {
   today: 'Hoy',
   overdue: 'Vencidas',
+  scheduled: 'Programadas',
   waiting: 'Esperando',
   undated: 'Sin fecha',
   blocked: 'Bloqueado',
@@ -18,6 +19,8 @@ export function filterByQuickView(view: QuickView, tasks: Task[], todayKey: stri
       return tasks.filter(t => t.status !== 'finished' && t.reviewDate === todayKey);
     case 'overdue':
       return tasks.filter(t => t.status !== 'finished' && !!t.reviewDate && t.reviewDate < todayKey);
+    case 'scheduled':
+      return tasks.filter(t => t.status === 'scheduled');
     case 'waiting':
       return tasks.filter(t => t.status === 'waiting');
     case 'undated':

@@ -1,4 +1,4 @@
-import { Zap, AlertTriangle, Clock, CalendarOff, CheckCircle2, Ban } from 'lucide-react';
+import { Zap, AlertTriangle, Clock, CalendarOff, CheckCircle2, Ban, CalendarClock } from 'lucide-react';
 import type { Task, Project, Area, EntityType } from '@/types';
 import { getTaskDisplayId, getEffortLabel } from '@/types';
 import { ImportanceDot, StatusIcon } from './StatusBadges';
@@ -11,6 +11,7 @@ import { QuickTaskEdit } from './QuickTaskEdit';
 const VIEW_META: Record<QuickView, { Icon: typeof Zap; accent: string }> = {
   today: { Icon: Zap, accent: 'text-primary' },
   overdue: { Icon: AlertTriangle, accent: 'text-destructive' },
+  scheduled: { Icon: CalendarClock, accent: 'text-status-ready' },
   waiting: { Icon: Clock, accent: 'text-status-waiting' },
   blocked: { Icon: Ban, accent: 'text-gray-500' },
   undated: { Icon: CalendarOff, accent: 'text-muted-foreground' },
@@ -19,6 +20,7 @@ const VIEW_META: Record<QuickView, { Icon: typeof Zap; accent: string }> = {
 const VIEW_DESCRIPTIONS: Record<QuickView, string | null> = {
   today: null,
   overdue: null,
+  scheduled: 'Sin impedimentos, agendadas para más adelante. Se activan el día previo a su fecha.',
   waiting: 'Depende de OTROS. Alguien más debe hacer algo primero.',
   blocked: 'No avanzas ahora (falta info, no es el momento, o simplemente no quieres).',
   undated: null,
