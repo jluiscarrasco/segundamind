@@ -274,24 +274,70 @@ function extractOpenGraphTags(html: string): Partial<ScrapedContent> {
   };
 }
 
-async function scrapeInstagram(url: string, html: string): Promise<ScrapedContent> {
-  const $ = cheerio.load(html);
-  const ogData = extractOpenGraphTags(html);
+// Instagram blocks most scrapers but serves rich OG metadata to
+// facebookexternalhit (Meta's own preview crawler) and similar bots.
+async function scrapeInstagram(url: string, _html: string): Promise<ScrapedContent> {
+  const uas = [
+    'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+    'Mozilla/5.0 (compatible; TelegramBot/1.0; +https://core.telegram.org/bots/webhooks)',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
+  ];
 
-  // Instagram stores caption in og:description
+  let ogData: Partial<ScrapedContent> = {};
+  let author = '';
+
+  for (const ua of uas) {
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': ua,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        },
+        timeout: 10000,
+        maxRedirects: 5,
+      });
+      const html = response.data;
+      ogData = extractOpenGraphTags(html);
+      const $ = cheerio.load(html);
+      author = $('meta[name="author"]').attr('content') || '';
+      if (ogData.title || ogData.description || ogData.imageUrl) break;
+    } catch (e: any) {
+      console.warn(`[Instagram] UA failed:`, e.message);
+    }
+  }
+
+  if (!author) {
+    const usernameMatch = url.match(/instagram\.com\/([^\/]+)\/(?:p|reel|tv)\//);
+    if (usernameMatch) author = '@' + usernameMatch[1];
+  }
+
   const caption = ogData.description || '';
-  // Extract hashtags and mentions for additional context
+  const rawTitle = ogData.title || '';
   const hashtags = caption.match(/#\w+/g) || [];
   const mentions = caption.match(/@\w+/g) || [];
 
+  let title = rawTitle;
+  const igMatch = rawTitle.match(/^(.+?)\s+on\s+Instagram:?\s*"?(.+?)"?$/i);
+  if (igMatch) {
+    title = igMatch[2] || igMatch[1];
+    if (!author) author = igMatch[1];
+  }
+  if (!title) title = author ? `Publicación de ${author}` : 'Publicación de Instagram';
+
+  const isReel = url.includes('/reel/');
+  const contentType = isReel ? 'Reel' : 'Post';
+
   return {
-    title: ogData.title || 'Instagram Post',
-    description: caption,
+    title,
+    description: caption || rawTitle,
     content: `
-Post by: ${ogData.title}
+Tipo: ${contentType} de Instagram
+Autor: ${author || '(desconocido)'}
+Título: ${rawTitle}
 Caption: ${caption}
 Hashtags: ${hashtags.join(', ')}
-Mentions: ${mentions.join(', ')}
+Menciones: ${mentions.join(', ')}
 URL: ${url}
     `.trim(),
     imageUrl: ogData.imageUrl,

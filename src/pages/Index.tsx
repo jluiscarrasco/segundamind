@@ -104,6 +104,38 @@ const Index = () => {
     }
   }, [store.tasks]);
 
+  // Handle PWA Share Target — captures URL/text shared from other apps
+  useEffect(() => {
+    if (window.location.pathname !== '/share') return;
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get('url') || '';
+    const title = params.get('title') || '';
+    const text = params.get('text') || '';
+
+    // Extract URL from the text field (some apps put the URL there instead of `url`)
+    const urlInText = text.match(/https?:\/\/\S+/)?.[0];
+    const finalUrl = url || urlInText || '';
+
+    // Build the inbox content
+    const parts = [title, text, !urlInText && finalUrl ? finalUrl : null]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i); // dedupe
+    const content = parts.join('\n').trim();
+
+    if (content) {
+      const type: 'link' | 'note' = finalUrl ? 'link' : 'note';
+      store.addInboxItem({ content, type }).then(() => {
+        toast.success(finalUrl ? 'Enlace guardado en el Inbox' : 'Guardado en el Inbox');
+      }).catch(err => {
+        console.error('Share import failed', err);
+        toast.error('No se pudo guardar');
+      });
+    }
+
+    // Clean URL and land the user on the home view
+    window.history.replaceState({}, '', '/');
+  }, []);
+
   // Quick inline edit handler (for status, importance, date, effort - Phase 2)
   const handleQuickEditTask = useCallback((taskId: string, field: keyof typeof store.tasks[0], value: any) => {
     store.updateTask(taskId, { [field]: value });

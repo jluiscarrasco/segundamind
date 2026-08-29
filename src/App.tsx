@@ -57,6 +57,7 @@ const App = () => (
                 <Route path="/install" element={<InstallPage />} />
                 <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/share" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </DriveProvider>
