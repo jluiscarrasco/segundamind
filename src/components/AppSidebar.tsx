@@ -29,6 +29,8 @@ import { ImportanceDot, StatusIcon } from "./StatusBadges";
 import { computeAreaHealth } from "@/lib/scoring";
 import { getTodayKeyCET } from "@/lib/dateUtils";
 import { filterByQuickView, QUICK_VIEW_LABELS, type QuickView } from "@/lib/quickViews";
+import { STATUS_LABELS, STATUS_DESCRIPTIONS, type Status } from "@/types";
+import { HelpCircle } from "lucide-react";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { McpAccessDialog } from "./McpAccessDialog";
 import { Plug } from "lucide-react";
@@ -104,6 +106,7 @@ export function AppSidebar({
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set(areas.map((a) => a.id)));
   const [showSettings, setShowSettings] = useState(false);
   const [showCalendarDialog, setShowCalendarDialog] = useState(false);
+  const [showStatusLegend, setShowStatusLegend] = useState(false);
   const { user } = useAuth();
   const todayKey = getTodayKeyCET();
 
@@ -158,6 +161,14 @@ export function AppSidebar({
                 {inboxCount}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setShowStatusLegend(true)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all"
+          >
+            <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1 text-left">Leyenda de estados</span>
           </button>
         </div>
 
@@ -316,6 +327,43 @@ export function AppSidebar({
         onOpenChange={setShowCalendarDialog}
         authToken={user?.uid || null}
       />
+
+      {/* Status legend dialog */}
+      {showStatusLegend && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-background/60 backdrop-blur-sm"
+          onClick={() => setShowStatusLegend(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-semibold text-foreground mb-3">Estados de tarea</h4>
+            <ul className="space-y-3">
+              {(Object.keys(STATUS_LABELS) as Status[]).map(s => (
+                <li key={s} className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    <StatusIcon status={s} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-foreground">{STATUS_LABELS[s]}</div>
+                    <div className="text-[11px] text-muted-foreground leading-relaxed">
+                      {STATUS_DESCRIPTIONS[s]}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setShowStatusLegend(false)}
+              className="mt-4 w-full py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   );
 
