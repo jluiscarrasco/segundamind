@@ -25,9 +25,13 @@ const STATUS_MULTIPLIER: Record<Status, number> = {
   finished: 0,
 };
 
-// A `scheduled` task with today or a past reviewDate behaves like `ready`.
+// A `scheduled` task is promoted to full `ready` priority from the day
+// BEFORE its reviewDate onwards — so `reviewDate <= tomorrow` triggers.
 function effectiveMultiplier(status: Status, reviewDate: string | null): number {
-  if (status === 'scheduled' && reviewDate && reviewDate <= getDateStr(new Date())) return 1;
+  if (status === 'scheduled' && reviewDate) {
+    const tomorrow = getDateStr(new Date(Date.now() + 86400000));
+    if (reviewDate <= tomorrow) return 1;
+  }
   return STATUS_MULTIPLIER[status];
 }
 

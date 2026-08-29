@@ -3,7 +3,7 @@ import type { Task, Project, Area, EntityType } from '@/types';
 import { getTaskDisplayId, getEffortLabel } from '@/types';
 import { ImportanceDot } from './StatusBadges';
 import { scoreTaskDetailed } from '@/lib/scoring';
-import { getTodayKeyCET } from '@/lib/dateUtils';
+import { addDaysCETKey } from '@/lib/dateUtils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface AhoraFocusProps {
@@ -20,13 +20,14 @@ interface AhoraFocusProps {
  * Only tasks that can actually be started (active / ready), ranked by score.
  */
 export function AhoraFocus({ tasks, projects, areas, onEditEntity, onCompleteTask }: AhoraFocusProps) {
-  // A `scheduled` task whose reviewDate has arrived is effectively `ready`.
-  const todayKey = getTodayKeyCET();
+  // A `scheduled` task appears here from the day BEFORE its reviewDate
+  // onwards — same threshold that scoring uses to promote it to full priority.
+  const tomorrowKey = addDaysCETKey(1);
   const top = tasks
     .filter(t =>
       t.status === 'active' ||
       t.status === 'ready' ||
-      (t.status === 'scheduled' && !!t.reviewDate && t.reviewDate <= todayKey)
+      (t.status === 'scheduled' && !!t.reviewDate && t.reviewDate <= tomorrowKey)
     )
     .map(t => ({ task: t, breakdown: scoreTaskDetailed(t, projects, areas) }))
     .sort((a, b) => b.breakdown.total - a.breakdown.total)
