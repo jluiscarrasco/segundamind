@@ -1,5 +1,5 @@
 import type { Importance, Status } from '@/types';
-import { Circle, AlertTriangle, Flame, Minus, Ghost, Lock, Pause, CheckCircle2, Zap, Clock, Filter, CircleCheck } from 'lucide-react';
+import { Circle, AlertTriangle, Flame, Minus, Ghost, Lock, Pause, CheckCircle2, Zap, Clock, Filter, CircleCheck, CalendarClock } from 'lucide-react';
 
 export function ImportanceDot({ importance, size = 'sm', showLabel = false }: { importance: Importance; size?: 'sm' | 'md'; showLabel?: boolean }) {
   const sizeClass = size === 'sm' ? 'w-2 h-2' : 'w-3 h-3';
@@ -53,6 +53,7 @@ export function StatusIcon({ status, className = '' }: { status: Status; classNa
   switch (status) {
     case 'funnel': return <Filter className={`${iconClass} text-status-funnel`} />;
     case 'ready': return <CircleCheck className={`${iconClass} text-status-ready`} />;
+    case 'scheduled': return <CalendarClock className={`${iconClass} text-status-ready opacity-70`} />;
     case 'blocked': return <Lock className={`${iconClass} text-status-blocked`} />;
     case 'waiting': return <Clock className={`${iconClass} text-status-waiting`} />;
     case 'active': return <Zap className={`${iconClass} text-status-active`} />;

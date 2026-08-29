@@ -1,5 +1,5 @@
 export type Importance = 'critical' | 'important' | 'normal' | 'low' | 'none';
-export type Status = 'funnel' | 'ready' | 'blocked' | 'waiting' | 'active' | 'finished';
+export type Status = 'funnel' | 'ready' | 'scheduled' | 'blocked' | 'waiting' | 'active' | 'finished';
 export type EntityType = 'area' | 'project' | 'task';
 
 export type Effort = 5 | 10 | 15 | 25 | 45 | 60 | 120 | 180 | 300 | 480 | null;
@@ -116,6 +116,7 @@ export const IMPORTANCE_LABELS: Record<Importance, string> = {
 export const STATUS_LABELS: Record<Status, string> = {
   funnel: 'Embudo',
   ready: 'Listo',
+  scheduled: '🗓️ Programada',
   blocked: '⛔ Bloqueado por mí',
   waiting: '⏳ Esperando por otros',
   active: 'En Progreso',
@@ -125,6 +126,7 @@ export const STATUS_LABELS: Record<Status, string> = {
 export const STATUS_DESCRIPTIONS: Record<Status, string> = {
   funnel: 'Idea o tarea en revisión. No está lista aún.',
   ready: 'Tarea lista para empezar cuando tengas tiempo.',
+  scheduled: 'Nada te impide avanzar, pero está agendada para más adelante. No trabajarás en ella hasta que llegue su fecha.',
   blocked: 'TÚ no puedes avanzar (falta info, recursos, decisión propia). Evita revisarlo mil veces.',
   waiting: 'Depende de OTROS. Alguien más debe hacer algo primero. Te libera la mente.',
   active: 'Tarea en progreso ahora mismo.',

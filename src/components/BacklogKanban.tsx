@@ -29,6 +29,7 @@ const IMPORTANCE_COLUMNS: { key: Importance; label: string; color: string; dotCo
 const STATUS_COLUMNS: { key: Status; label: string; color: string; dotColor: string }[] = [
   { key: 'funnel', label: 'Embudo', color: 'bg-status-funnel/10 border-status-funnel/30', dotColor: 'bg-status-funnel' },
   { key: 'ready', label: 'Listo', color: 'bg-status-ready/10 border-status-ready/30', dotColor: 'bg-status-ready' },
+  { key: 'scheduled', label: 'Programada', color: 'bg-status-ready/5 border-status-ready/20', dotColor: 'bg-status-ready/60' },
   { key: 'blocked', label: 'Bloqueado', color: 'bg-status-blocked/10 border-status-blocked/30', dotColor: 'bg-status-blocked' },
   { key: 'waiting', label: 'Esperando', color: 'bg-status-waiting/10 border-status-waiting/30', dotColor: 'bg-status-waiting' },
   { key: 'active', label: 'En Progreso', color: 'bg-status-active/10 border-status-active/30', dotColor: 'bg-status-active' },

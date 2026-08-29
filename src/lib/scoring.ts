@@ -18,11 +18,18 @@ const importanceScore = (i: Importance | string | null | undefined): number => {
 const STATUS_MULTIPLIER: Record<Status, number> = {
   funnel: 0.5,
   ready: 1,
+  scheduled: 0.3, // dim by default; promoted to 1 once its reviewDate has arrived
   blocked: 0.1,
   waiting: 0.1,
   active: 1,
   finished: 0,
 };
+
+// A `scheduled` task with today or a past reviewDate behaves like `ready`.
+function effectiveMultiplier(status: Status, reviewDate: string | null): number {
+  if (status === 'scheduled' && reviewDate && reviewDate <= getDateStr(new Date())) return 1;
+  return STATUS_MULTIPLIER[status];
+}
 
 function getDateStr(d: Date): string {
   const y = d.getFullYear();
@@ -67,11 +74,11 @@ export function scoreTaskDetailed(task: Task, projects: Project[], areas: Area[]
   const base = importanceScore(task.importance);
   const urgency = getUrgencyBonus(task.reviewDate);
   const cascade = getCascadeBonus(task, projects, areas);
-  const multiplier = STATUS_MULTIPLIER[task.status];
+  const multiplier = effectiveMultiplier(task.status, task.reviewDate);
   const total = Math.round((base + urgency + cascade) * multiplier);
 
   const urgencyLabels: Record<number, string> = { 50: 'Vencida', 35: 'Hoy', 25: 'Mañana' };
-  const statusLabels: Record<string, string> = { funnel: '×0.5 embudo', ready: '×1', active: '×1', blocked: '×0.1 bloqueada', waiting: '×0.1 esperando' };
+  const statusLabels: Record<string, string> = { funnel: '×0.5 embudo', ready: '×1', scheduled: '×0.3 programada', active: '×1', blocked: '×0.1 bloqueada', waiting: '×0.1 esperando' };
 
   return {
     total, base, urgency, cascade, multiplier,
@@ -92,7 +99,7 @@ export function scoreProject(project: Project, areas: Area[]): number {
   const urgency = getUrgencyBonus(project.reviewDate);
   const area = areas.find(a => a.id === project.areaId);
   const cascade = area?.importance === 'critical' ? 20 : 0;
-  const multiplier = STATUS_MULTIPLIER[project.status];
+  const multiplier = effectiveMultiplier(project.status, project.reviewDate);
   return Math.round((base + urgency + cascade) * multiplier);
 }
 
@@ -100,7 +107,7 @@ export function scoreArea(area: Area): number {
   if (area.status === 'finished') return 0;
   const base = importanceScore(area.importance);
   const urgency = getUrgencyBonus(area.reviewDate);
-  const multiplier = STATUS_MULTIPLIER[area.status];
+  const multiplier = effectiveMultiplier(area.status, area.reviewDate);
   return Math.round((base + urgency) * multiplier);
 }
 
@@ -143,7 +150,7 @@ export function computeAreaHealth(
   const today = getDateStr(new Date());
   const nonFinished = areaTasks.filter(t => t.status !== 'finished');
 
-  const active = areaTasks.filter(t => t.status === 'active' || t.status === 'ready').length;
+  const active = areaTasks.filter(t => t.status === 'active' || t.status === 'ready' || t.status === 'scheduled').length;
   const waiting = areaTasks.filter(t => t.status === 'funnel').length;
   const blocked = areaTasks.filter(t => t.status === 'blocked').length;
   const finished = areaTasks.filter(t => t.status === 'finished').length;
