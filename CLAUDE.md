@@ -36,7 +36,7 @@ Package manager: repo has both `bun.lock` and `package-lock.json`; commands abov
 
 The frontend calls `/api/*`. In dev, Vite proxies `/api` → `http://localhost:8082`. **What answers on 8082 depends on how you started things:**
 
-- **`server.ts`** (root) — the lightweight *dev-only* Express server run by `npm run dev`. Implements a subset (classify-inbox, enrich-url, scrape-and-summarize, analyze-attachment, transcribe-audio, ai-assistant). Wiki + MCP routes here are **501 placeholders**. Despite the `GEMINI_API_KEY` env name, it actually calls **Groq** (`llama-3.3-70b-versatile`, Whisper `whisper-large-v3-turbo`).
+- **`server.ts`** (root) — the lightweight *dev-only* Express server run by `npm run dev`. Implements a subset (classify-inbox, enrich-url, scrape-and-summarize, analyze-attachment, transcribe-audio, ai-assistant). Wiki + MCP routes here are **501 placeholders**. Despite the `GEMINI_API_KEY` env name, it actually calls **Groq** (`openai/gpt-oss-120b`, Whisper `whisper-large-v3-turbo`).
 - **`functions/src/index.ts`** (~1600 lines, `exports.api`) — the *real production* backend, a single Express app mounted at both `/api` and `/`. This is the authoritative implementation of everything: all AI endpoints, all wiki-* routes, the OAuth flow, and the **MCP endpoint**.
 
 When changing an AI/wiki endpoint, check whether it needs to change in **both** files. `server.ts` is a convenience mirror that drifts; `functions/src/index.ts` is source of truth for prod.
