@@ -356,11 +356,10 @@ export function useStore() {
   // --- Resources ---
   const addResource = useCallback(async (resource: Omit<Resource, 'id' | 'createdAt'>) => {
     if (!user) return;
-    const docRef = await addDoc(collection(db, 'resources'), {
-      ...resource,
-      userId: user.uid,
-      createdAt: serverTimestamp(),
-    });
+    // Firestore rejects undefined values — strip them out before writing.
+    const payload: any = { userId: user.uid, createdAt: serverTimestamp() };
+    for (const [k, v] of Object.entries(resource)) if (v !== undefined) payload[k] = v;
+    const docRef = await addDoc(collection(db, 'resources'), payload);
     return { ...resource, id: docRef.id, createdAt: new Date().toISOString() };
   }, [user]);
 

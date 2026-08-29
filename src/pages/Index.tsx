@@ -147,23 +147,38 @@ const Index = () => {
     store.updateTask(taskId, { status: 'finished' });
   }, [store]);
 
-  const handleCloseAndReplicateQuick = useCallback((taskId: string, newReviewDate: string) => {
+  const handleCloseAndReplicateQuick = useCallback(async (taskId: string, newReviewDate: string) => {
     const task = store.tasks.find(t => t.id === taskId);
-    if (task) {
-      // Close the current task
-      store.updateTask(taskId, { status: 'finished' });
-      // Create a new task with the same properties but new date
-      store.createTask(task.projectId, {
-        name: task.name,
-        description: task.description,
-        importance: task.importance,
-        status: 'ready',
-        reviewDate: newReviewDate,
-        effort: task.effort,
-        startTime: task.startTime,
-      });
-      toast.success('Tarea cerrada y nueva tarea creada');
+    if (!task) return;
+    // Close the current task
+    await store.updateTask(taskId, { status: 'finished' });
+    // Create the next occurrence with the same core fields
+    const newTask = await store.addTask({
+      projectId: task.projectId,
+      name: task.name,
+      description: task.description,
+      importance: task.importance,
+      status: 'ready',
+      reviewDate: newReviewDate,
+      effort: task.effort,
+      startTime: task.startTime,
+    });
+    // Clone attached resources (notes, links, images, files) onto the new task
+    if (newTask) {
+      const attached = store.resources.filter(
+        r => r.entityType === 'task' && r.entityId === task.id
+      );
+      await Promise.all(attached.map(r => store.addResource({
+        entityType: 'task',
+        entityId: newTask.id,
+        type: r.type,
+        content: r.content,
+        fileName: r.fileName,
+        fileSize: r.fileSize,
+        mimeType: r.mimeType,
+      })));
     }
+    toast.success('Tarea cerrada y nueva tarea creada');
   }, [store]);
 
   // Keyboard shortcuts
@@ -252,12 +267,12 @@ const Index = () => {
   };
 
   // Close a recurring task and spawn its next occurrence under the same project.
-  const handleCloseAndReplicate = (data: EntityFormData, newReviewDate: string) => {
+  const handleCloseAndReplicate = async (data: EntityFormData, newReviewDate: string) => {
     if (!modal || modal.mode !== 'edit' || modal.type !== 'task') return;
     const task = store.tasks.find(t => t.id === modal.id);
     if (!task) return;
     // Close the original as finished, persisting any edits made in the form.
-    store.updateTask(task.id, {
+    await store.updateTask(task.id, {
       name: data.name,
       description: data.description,
       importance: data.importance,
@@ -266,7 +281,7 @@ const Index = () => {
       status: 'finished',
     });
     // Create the next occurrence, ready to start, on the chosen date.
-    store.addTask({
+    const newTask = await store.addTask({
       projectId: task.projectId,
       name: data.name,
       description: data.description,
@@ -276,6 +291,21 @@ const Index = () => {
       status: 'ready',
       subtasks: (data.subtasks ?? []).map(s => ({ ...s, id: crypto.randomUUID(), completed: false })),
     });
+    // Clone attached resources (notes, links, images, files) onto the new task
+    if (newTask) {
+      const attached = store.resources.filter(
+        r => r.entityType === 'task' && r.entityId === task.id
+      );
+      await Promise.all(attached.map(r => store.addResource({
+        entityType: 'task',
+        entityId: newTask.id,
+        type: r.type,
+        content: r.content,
+        fileName: r.fileName,
+        fileSize: r.fileSize,
+        mimeType: r.mimeType,
+      })));
+    }
     setModal(null);
     toast.success(`Tarea cerrada y replicada para el ${newReviewDate}`);
   };
