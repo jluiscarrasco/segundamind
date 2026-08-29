@@ -33,6 +33,13 @@ export function addDaysCETKey(days: number): string {
   return dateToCETKey(d);
 }
 
+/** Get a date key N months from now in CET */
+export function addMonthsCETKey(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return dateToCETKey(d);
+}
+
 /** Parse a YYYY-MM-DD string into a local Date (avoiding UTC interpretation) */
 export function parseDateString(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);

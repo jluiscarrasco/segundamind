@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import type { Task, Project, Area, Status, Importance, Effort } from '@/types';
 import { STATUS_LABELS, IMPORTANCE_LABELS, EFFORT_OPTIONS } from '@/types';
 import { ImportanceDot } from './StatusBadges';
-import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
+import { getTodayKeyCET, addDaysCETKey, addMonthsCETKey } from '@/lib/dateUtils';
 
 interface QuickTaskEditProps {
   task: Task;
@@ -138,8 +138,31 @@ export function QuickTaskEdit({ task, projects, areas, onUpdate, layout = 'hover
             type="date"
             value={replicateDate}
             onChange={e => setReplicateDate(e.target.value)}
-            className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-4"
+            className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-2"
           />
+          <div className="grid grid-cols-5 gap-1 mb-4">
+            {[
+              { label: '+1d', date: () => addDaysCETKey(1) },
+              { label: '+1sem', date: () => addDaysCETKey(7) },
+              { label: '+2sem', date: () => addDaysCETKey(14) },
+              { label: '+1mes', date: () => addMonthsCETKey(1) },
+              { label: '+3mes', date: () => addMonthsCETKey(3) },
+            ].map(({ label, date }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  const d = date();
+                  setReplicateDate(d);
+                  onCloseAndReplicate(d);
+                  setShowReplicateDialog(false);
+                }}
+                className="py-1.5 rounded-md bg-secondary hover:bg-primary/10 text-[10px] font-semibold text-foreground transition-all"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2">
             <button
               type="button"

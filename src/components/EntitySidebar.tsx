@@ -5,6 +5,7 @@ import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, STATUS_DESCRIPTIONS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
+import { addDaysCETKey, addMonthsCETKey } from '@/lib/dateUtils';
 import { storage } from '@/integrations/firebase/config';
 import { uploadBytes, ref, getDownloadURL, deleteObject } from 'firebase/storage';
 import { toast } from 'sonner';
@@ -742,8 +743,41 @@ Responde SOLO con un JSON array, sin texto adicional:
               type="date"
               value={replicateDate}
               onChange={e => setReplicateDate(e.target.value)}
-              className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-4"
+              className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-2"
             />
+            <div className="grid grid-cols-5 gap-1 mb-4">
+              {[
+                { label: '+1d', date: () => addDaysCETKey(1) },
+                { label: '+1sem', date: () => addDaysCETKey(7) },
+                { label: '+2sem', date: () => addDaysCETKey(14) },
+                { label: '+1mes', date: () => addMonthsCETKey(1) },
+                { label: '+3mes', date: () => addMonthsCETKey(3) },
+              ].map(({ label, date }) => (
+                <button
+                  key={label}
+                  type="button"
+                  disabled={!name.trim()}
+                  onClick={() => {
+                    if (!onCloseAndReplicate || !name.trim()) return;
+                    const d = date();
+                    setReplicateDate(d);
+                    onCloseAndReplicate({
+                      name: name.trim(),
+                      description: description.trim(),
+                      importance,
+                      status,
+                      reviewDate: reviewDate || null,
+                      startTime: startTime || null,
+                      ...(type === 'task' ? { effort, subtasks } : {}),
+                    }, d);
+                    setShowReplicate(false);
+                  }}
+                  className="py-1.5 rounded-md bg-secondary hover:bg-primary/10 text-[10px] font-semibold text-foreground disabled:opacity-40 transition-all"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
