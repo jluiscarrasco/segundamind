@@ -23,16 +23,17 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.png", "icon-192.png", "icon-512.png", "logo.svg"],
       manifest: {
-        name: "MyBrain — Captura de Notas",
-        short_name: "MyBrain",
-        description: "Captura ideas y notas al instante",
-        theme_color: "#1a73e8",
-        background_color: "#f5f6f8",
+        name: "SecondBrain",
+        short_name: "SecondBrain",
+        description: "Captura, organiza y ejecuta — tu segundo cerebro",
+        theme_color: "#1E3A8A",
+        background_color: "#0F172A",
         display: "standalone",
         start_url: "/",
         icons: [
+          { src: "/logo.svg", sizes: "any", type: "image/svg+xml" },
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
