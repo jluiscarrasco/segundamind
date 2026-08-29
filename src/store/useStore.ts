@@ -295,49 +295,28 @@ export function useStore() {
       createdAt: serverTimestamp(),
     });
 
-    const newTask: Task = {
-      id: taskDocRef.id,
-      projectId,
-      taskNumber: nextNumber,
-      name: taskName || item.content.slice(0, 80),
-      description: taskDescription || item.content,
-      status: 'funnel',
-      importance,
-      effort: null,
-      reviewDate: null,
-      createdAt: new Date().toISOString(),
-    };
-
     // Auto-attach URL or image as resource if inbox item is a link or image
-    const newResources: Resource[] = [];
     if (item.type === 'link' || item.type === 'image') {
-      const resDocRef = await addDoc(collection(db, 'resources'), {
+      await addDoc(collection(db, 'resources'), {
         entityType: 'task',
-        entityId: newTask.id,
+        entityId: taskDocRef.id,
         type: item.type,
         content: item.content,
         userId: user.uid,
         createdAt: serverTimestamp(),
-      });
-      newResources.push({
-        id: resDocRef.id,
-        entityType: 'task',
-        entityId: newTask.id,
-        type: item.type,
-        content: item.content,
-        createdAt: new Date().toISOString(),
       });
     }
 
     // Delete inbox item
     await deleteDoc(doc(db, 'inbox_items', inboxId));
 
+    // Only optimistic-remove the inbox item and update the project counter.
+    // The `tasks` and `resources` collections have onSnapshot listeners that
+    // will pick up the new documents; appending here would duplicate them.
     setData(d => ({
       ...d,
       projects: d.projects.map(p => p.id === projectId ? { ...p, taskCounter: nextNumber } : p),
       inbox: d.inbox.filter(i => i.id !== inboxId),
-      tasks: [...d.tasks, newTask],
-      resources: [...d.resources, ...newResources],
     }));
   }, [user, data.inbox, data.projects]);
 
@@ -347,67 +326,18 @@ export function useStore() {
     if (!item) return;
 
     const batch = writeBatch(db);
-    const newResources: Resource[] = [];
 
-    // Add link resource if item is a link
-    if (item.type === 'link') {
-      const resDocRef = doc(collection(db, 'resources'));
-      batch.set(resDocRef, {
-        entityType,
-        entityId,
-        type: 'link',
-        content: item.content,
-        userId: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      newResources.push({
-        id: resDocRef.id,
-        entityType,
-        entityId,
-        type: 'link',
-        content: item.content,
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    // Add image resource if item is an image
-    if (item.type === 'image') {
-      const resDocRef = doc(collection(db, 'resources'));
-      batch.set(resDocRef, {
-        entityType,
-        entityId,
-        type: 'image',
-        content: item.content,
-        userId: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      newResources.push({
-        id: resDocRef.id,
-        entityType,
-        entityId,
-        type: 'image',
-        content: item.content,
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    // Always add note resource (for notes and text descriptions)
-    const noteDocRef = doc(collection(db, 'resources'));
-    batch.set(noteDocRef, {
+    // Attach the inbox item as a single resource whose type matches the item.
+    // Previously this always added a `note` resource on top of the link/image
+    // resource, which duplicated the URL in the entity's links section.
+    const resDocRef = doc(collection(db, 'resources'));
+    batch.set(resDocRef, {
       entityType,
       entityId,
-      type: 'note',
+      type: item.type,
       content: item.content,
       userId: user.uid,
       createdAt: serverTimestamp(),
-    });
-    newResources.push({
-      id: noteDocRef.id,
-      entityType,
-      entityId,
-      type: 'note',
-      content: item.content,
-      createdAt: new Date().toISOString(),
     });
 
     // Delete inbox item
@@ -415,10 +345,11 @@ export function useStore() {
 
     await batch.commit();
 
+    // Only optimistic-remove the inbox item; the resources onSnapshot listener
+    // will pick up the new documents and appending here would duplicate them.
     setData(d => ({
       ...d,
       inbox: d.inbox.filter(i => i.id !== inboxId),
-      resources: [...d.resources, ...newResources],
     }));
   }, [user, data.inbox]);
 
