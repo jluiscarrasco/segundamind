@@ -318,12 +318,16 @@ async function scrapeInstagram(url: string, _html: string): Promise<ScrapedConte
   const mentions = caption.match(/@\w+/g) || [];
 
   let title = rawTitle;
-  const igMatch = rawTitle.match(/^(.+?)\s+on\s+Instagram:?\s*"?(.+?)"?$/i);
-  if (igMatch) {
-    title = igMatch[2] || igMatch[1];
-    if (!author) author = igMatch[1];
+  const igSplit = rawTitle.split(/\s+Instagram:\s*/i);
+  if (igSplit.length >= 2) {
+    const beforeAuthor = igSplit[0].replace(/\s+(on|en|sur|bei|op|em|na|di|no)$/i, '').trim();
+    const captionPart = igSplit.slice(1).join(' Instagram: ').replace(/^"|"$/g, '').trim();
+    title = captionPart || rawTitle;
+    if (!author) author = beforeAuthor;
   }
-  if (!title) title = author ? `Publicación de ${author}` : 'Publicación de Instagram';
+  if (!title || title === 'Instagram') {
+    title = author ? `Publicación de ${author}` : 'Publicación de Instagram';
+  }
 
   const isReel = url.includes('/reel/');
   const contentType = isReel ? 'Reel' : 'Post';

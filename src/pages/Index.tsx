@@ -112,15 +112,17 @@ const Index = () => {
     const title = params.get('title') || '';
     const text = params.get('text') || '';
 
-    // Extract URL from the text field (some apps put the URL there instead of `url`)
+    // Extract URL from any field (Android's share_target puts it in different places
+    // depending on the source app — Instagram usually stuffs it into `text`).
     const urlInText = text.match(/https?:\/\/\S+/)?.[0];
-    const finalUrl = url || urlInText || '';
+    const urlInTitle = title.match(/https?:\/\/\S+/)?.[0];
+    const finalUrl = url || urlInText || urlInTitle || '';
 
-    // Build the inbox content
-    const parts = [title, text, !urlInText && finalUrl ? finalUrl : null]
-      .filter(Boolean)
-      .filter((v, i, a) => a.indexOf(v) === i); // dedupe
-    const content = parts.join('\n').trim();
+    // If we found a URL, save ONLY the URL as the inbox content — the frontend
+    // detects a bare URL and routes it through enrich-url (proper scraping) instead
+    // of classify-inbox (plain-text classifier). Title/text from Instagram is
+    // redundant with what scraping will get.
+    const content = finalUrl || [title, text].filter(Boolean).join('\n').trim();
 
     if (content) {
       const type: 'link' | 'note' = finalUrl ? 'link' : 'note';

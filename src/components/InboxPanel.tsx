@@ -128,12 +128,14 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
     setClassifying(true);
     setAiReasoning('');
     try {
-      const isUrl = content.trim().startsWith('http://') || content.trim().startsWith('https://');
+      // Detect any URL in the content, not only when it starts with http.
+      // Shared items often arrive as "Some title\nhttps://..." or similar.
+      const urlMatch = content.match(/https?:\/\/\S+/);
 
       let data;
-      if (isUrl) {
+      if (urlMatch) {
         // For URLs: use intelligent enrichment
-        data = await cloudFunctions.enrichUrl({ url: content.trim() }, user);
+        data = await cloudFunctions.enrichUrl({ url: urlMatch[0] }, user);
       } else {
         // For text: use standard classification
         data = await cloudFunctions.classifyInbox({
