@@ -45,6 +45,13 @@ const SCHEDULED_BUCKETS: { key: string; label: string; maxDaysAhead: number | nu
   { key: 'later', label: 'Más tarde', maxDaysAhead: null },
 ];
 
+const PRIORITY_BUCKETS: { key: string; label: string; minScore: number }[] = [
+  { key: 'high', label: 'Alta prioridad', minScore: 100 },
+  { key: 'medium', label: 'Prioridad media', minScore: 60 },
+  { key: 'low', label: 'Prioridad baja', minScore: 30 },
+  { key: 'rest', label: 'Sin prioridad', minScore: -Infinity },
+];
+
 export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPostpone, onCompleteTask, onQuickEdit }: QuickTaskListProps) {
   const { Icon, accent } = VIEW_META[view];
   const todayKey = getTodayKeyCET();
@@ -52,6 +59,20 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
   const sorted = [...tasks].sort(
     (a, b) => scoreTaskDetailed(b, projects, areas).total - scoreTaskDetailed(a, projects, areas).total
   );
+
+  // Hoy: group by priority band.
+  const groupedByPriority = view === 'today'
+    ? (() => {
+        const scored = tasks.map(t => ({ t, score: scoreTaskDetailed(t, projects, areas).total }))
+          .sort((a, b) => b.score - a.score);
+        const groups: Record<string, Task[]> = Object.fromEntries(PRIORITY_BUCKETS.map(b => [b.key, []]));
+        scored.forEach(({ t, score }) => {
+          const bucket = PRIORITY_BUCKETS.find(b => score >= b.minScore) ?? PRIORITY_BUCKETS[PRIORITY_BUCKETS.length - 1];
+          groups[bucket.key].push(t);
+        });
+        return groups;
+      })()
+    : null;
 
   // Programadas: group by proximity to today.
   const groupedScheduled = view === 'scheduled'
@@ -149,6 +170,24 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
         <div className="px-5 py-10 text-center text-sm text-muted-foreground flex flex-col items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-primary/50" />
           <span>Nada por aquí. 🎉</span>
+        </div>
+      ) : groupedByPriority ? (
+        <div>
+          {PRIORITY_BUCKETS.map(b => {
+            const items = groupedByPriority[b.key];
+            if (items.length === 0) return null;
+            return (
+              <div key={b.key}>
+                <div className="px-5 py-1.5 bg-secondary/40 border-y border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <span>{b.label}</span>
+                  <span className="text-muted-foreground/60">({items.length})</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {items.map(renderTask)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : groupedScheduled ? (
         <div>
