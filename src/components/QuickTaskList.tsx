@@ -1,6 +1,6 @@
 import { Zap, AlertTriangle, Clock, CalendarOff, CheckCircle2, Ban, CalendarClock } from 'lucide-react';
-import type { Task, Project, Area, EntityType } from '@/types';
-import { getTaskDisplayId, getEffortLabel } from '@/types';
+import type { Task, Project, Area, EntityType, Importance } from '@/types';
+import { getTaskDisplayId, getEffortLabel, IMPORTANCE_LABELS } from '@/types';
 import { ImportanceDot, StatusIcon } from './StatusBadges';
 import { scoreTaskDetailed } from '@/lib/scoring';
 import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
@@ -23,7 +23,7 @@ const VIEW_DESCRIPTIONS: Record<QuickView, string | null> = {
   scheduled: 'Sin impedimentos, agendadas para más adelante. Se activan el día previo a su fecha.',
   waiting: 'Depende de OTROS. Alguien más debe hacer algo primero.',
   blocked: 'No avanzas ahora (falta info, no es el momento, o simplemente no quieres).',
-  undated: null,
+  undated: 'Sin fecha asignada. Usa los atajos de la derecha para agendarlas rápido.',
 };
 
 interface QuickTaskListProps {
@@ -52,6 +52,8 @@ const PRIORITY_BUCKETS: { key: string; label: string; minScore: number }[] = [
   { key: 'rest', label: 'Sin prioridad', minScore: -Infinity },
 ];
 
+const IMPORTANCE_BUCKETS: Importance[] = ['critical', 'important', 'normal', 'low', 'none'];
+
 export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPostpone, onCompleteTask, onQuickEdit }: QuickTaskListProps) {
   const { Icon, accent } = VIEW_META[view];
   const todayKey = getTodayKeyCET();
@@ -70,6 +72,19 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
           const bucket = PRIORITY_BUCKETS.find(b => score >= b.minScore) ?? PRIORITY_BUCKETS[PRIORITY_BUCKETS.length - 1];
           groups[bucket.key].push(t);
         });
+        return groups;
+      })()
+    : null;
+
+  // Sin fecha: group by importance so what MATTERS most sits on top.
+  const groupedByImportance = view === 'undated'
+    ? (() => {
+        const groups: Record<Importance, Task[]> = {
+          critical: [], important: [], normal: [], low: [], none: [],
+        };
+        [...tasks]
+          .sort((a, b) => scoreTaskDetailed(b, projects, areas).total - scoreTaskDetailed(a, projects, areas).total)
+          .forEach(t => { groups[t.importance].push(t); });
         return groups;
       })()
     : null;
@@ -107,10 +122,28 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
 
   const description = VIEW_DESCRIPTIONS[view];
 
+  // In "Sin fecha" view, warn about suspicious combos that usually mean
+  // the user forgot to set a date on something that clearly needs one.
+  const undatedWarnings = (t: Task): string[] => {
+    if (view !== 'undated') return [];
+    const w: string[] = [];
+    if (t.status !== 'funnel') w.push(`Estado "${t.status}" sin fecha — normalmente estas están en "Embudo"`);
+    if (t.importance === 'critical') w.push('Crítica sin fecha — quizás debería tener una');
+    return w;
+  };
+
+  const quickDateOptions: { label: string; date: () => string; title: string }[] = [
+    { label: 'Hoy',    date: () => todayKey,            title: 'Marcar para hoy' },
+    { label: 'Mañ',    date: () => addDaysCETKey(1),    title: 'Marcar para mañana' },
+    { label: '+1sem',  date: () => addDaysCETKey(7),    title: 'Marcar para dentro de una semana' },
+    { label: '+1mes',  date: () => addDaysCETKey(30),   title: 'Marcar para dentro de un mes' },
+  ];
+
   const renderTask = (t: Task) => {
     const project = projects.find(p => p.id === t.projectId);
     const area = project ? areas.find(a => a.id === project.areaId) : null;
     const isOverdue = !!t.reviewDate && t.reviewDate < todayKey;
+    const warnings = undatedWarnings(t);
     return (
       <div
         key={t.id}
@@ -127,6 +160,11 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
         </span>
         <ImportanceDot importance={t.importance} size="sm" />
         <span className="text-xs font-medium text-foreground truncate flex-1">{t.name}</span>
+        {warnings.length > 0 && (
+          <span title={warnings.join(' · ')} className="text-amber-500 shrink-0" onClick={e => e.stopPropagation()}>
+            <AlertTriangle className="w-3.5 h-3.5" />
+          </span>
+        )}
         <span className="text-[11px] text-muted-foreground truncate max-w-[140px] hidden md:block">
           {area?.name || ''}{area && project ? ' › ' : ''}{project?.name || ''}
         </span>
@@ -134,9 +172,26 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
         {t.effort != null && (
           <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:block">{getEffortLabel(t.effort)}</span>
         )}
-        <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
-          {formatDate(t.reviewDate)}
-        </span>
+        {view === 'undated' && onQuickEdit && (
+          <div className="hidden sm:flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+            {quickDateOptions.map(({ label, date, title }) => (
+              <button
+                key={label}
+                type="button"
+                title={title}
+                onClick={() => onQuickEdit(t.id, 'reviewDate', date())}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        {view !== 'undated' && (
+          <span className={`text-[11px] font-medium shrink-0 ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {formatDate(t.reviewDate)}
+          </span>
+        )}
         <div
           className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
           onClick={(e) => e.stopPropagation()}
@@ -198,6 +253,28 @@ export function QuickTaskList({ view, tasks, projects, areas, onEditEntity, onPo
               <div key={b.key}>
                 <div className="px-5 py-1.5 bg-secondary/40 border-y border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                   <span>{b.label}</span>
+                  <span className="text-muted-foreground/60">({items.length})</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {items.map(renderTask)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : groupedByImportance ? (
+        <div>
+          {IMPORTANCE_BUCKETS.map(imp => {
+            const items = groupedByImportance[imp];
+            if (items.length === 0) return null;
+            return (
+              <div key={imp}>
+                <div className="px-5 py-1.5 bg-secondary/40 border-y border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <span
+                    className="inline-block w-2 h-2 rounded-full"
+                    style={{ backgroundColor: `hsl(var(--importance-${imp}))` }}
+                  />
+                  <span>{IMPORTANCE_LABELS[imp]}</span>
                   <span className="text-muted-foreground/60">({items.length})</span>
                 </div>
                 <div className="divide-y divide-border">
