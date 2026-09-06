@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image, HelpCircle } from 'lucide-react';
-import type { Importance, Status, Resource, Effort, Subtask } from '@/types';
+import { X, FolderPlus, Pencil, Trash2, Link2, ExternalLink, Plus, StickyNote, Loader2, Sparkles, Image, HelpCircle, FolderInput } from 'lucide-react';
+import type { Importance, Status, Resource, Effort, Subtask, Project, Area } from '@/types';
 import { IMPORTANCE_LABELS, STATUS_LABELS, STATUS_DESCRIPTIONS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
@@ -36,9 +36,14 @@ interface EntitySidebarProps {
   /** Close this task (as finished) and spawn a replica in "Listo" with a new date. */
   onCloseAndReplicate?: (data: EntityFormData, newReviewDate: string) => void;
   entityId?: string;
+  /** For tasks: reassign to a different project (updates projectId + taskNumber). */
+  projects?: Project[];
+  areas?: Area[];
+  currentProjectId?: string;
+  onMoveToProject?: (newProjectId: string) => void;
 }
 
-export function EntitySidebar({ type, mode, initialData, displayId, resources = [], onSubmit, onDelete, onClose, onAddResource, onRemoveResource, onCloseAndReplicate, entityId }: EntitySidebarProps) {
+export function EntitySidebar({ type, mode, initialData, displayId, resources = [], onSubmit, onDelete, onClose, onAddResource, onRemoveResource, onCloseAndReplicate, entityId, projects, areas, currentProjectId, onMoveToProject }: EntitySidebarProps) {
   const { user } = useAuth();
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -60,6 +65,8 @@ export function EntitySidebar({ type, mode, initialData, displayId, resources = 
   const [showImageInput, setShowImageInput] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showStatusHelp, setShowStatusHelp] = useState(false);
+  const [showMove, setShowMove] = useState(false);
+  const [moveProjectId, setMoveProjectId] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const entityLinks = resources.filter(r => r.entityId === entityId && r.entityType === type && r.type === 'link');
@@ -264,6 +271,15 @@ Responde SOLO con un JSON array, sin texto adicional:
             <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{displayId}</span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            {isEdit && type === 'task' && onMoveToProject && projects && projects.length > 0 && (
+              <button
+                onClick={() => { setMoveProjectId(currentProjectId || ''); setShowMove(true); }}
+                className="p-1.5 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                title="Mover a otro proyecto"
+              >
+                <FolderInput className="w-4 h-4" />
+              </button>
+            )}
             {isEdit && onDelete && (
               <button
                 onClick={onDelete}
@@ -793,6 +809,76 @@ Responde SOLO con un JSON array, sin texto adicional:
                 className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-40 transition-all"
               >
                 Cerrar y crear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move-to-project dialog */}
+      {showMove && projects && onMoveToProject && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm"
+          onClick={() => setShowMove(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-sm mx-4 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <h4 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+              <FolderInput className="w-4 h-4 text-primary" />
+              Mover a otro proyecto
+            </h4>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              La tarea recibirá un nuevo ID basado en el proyecto destino
+              (por ejemplo, si mueves a "SEC" pasará a llamarse SEC-N).
+            </p>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Proyecto destino</label>
+            <select
+              value={moveProjectId}
+              onChange={e => setMoveProjectId(e.target.value)}
+              className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all mb-4"
+            >
+              <option value="">— Selecciona —</option>
+              {(areas ?? []).map(a => {
+                const areaProjects = projects.filter(p => p.areaId === a.id && p.status !== 'finished');
+                if (areaProjects.length === 0) return null;
+                return (
+                  <optgroup key={a.id} label={a.name}>
+                    {areaProjects.map(p => (
+                      <option key={p.id} value={p.id} disabled={p.id === currentProjectId}>
+                        {p.key ? `${p.key} · ` : ''}{p.name}{p.id === currentProjectId ? ' (actual)' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+              {/* Projects without a matching area, if any */}
+              {projects.filter(p => !areas?.some(a => a.id === p.areaId) && p.status !== 'finished').map(p => (
+                <option key={p.id} value={p.id} disabled={p.id === currentProjectId}>
+                  {p.key ? `${p.key} · ` : ''}{p.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowMove(false)}
+                className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground hover:text-foreground transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!moveProjectId || moveProjectId === currentProjectId) return;
+                  onMoveToProject(moveProjectId);
+                  setShowMove(false);
+                }}
+                disabled={!moveProjectId || moveProjectId === currentProjectId}
+                className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-40 transition-all"
+              >
+                Mover
               </button>
             </div>
           </div>

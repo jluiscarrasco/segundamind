@@ -536,6 +536,10 @@ const Index = () => {
             onAddResource={store.addResource}
             onRemoveResource={store.removeResource}
             onCloseAndReplicate={modal.mode === 'edit' && modal.type === 'task' ? handleCloseAndReplicate : undefined}
+            projects={store.projects}
+            areas={store.areas}
+            currentProjectId={modal.mode === 'edit' && modal.type === 'task' ? store.tasks.find(t => t.id === modal.id)?.projectId : undefined}
+            onMoveToProject={modal.mode === 'edit' && modal.type === 'task' ? ((newProjectId: string) => store.moveTaskToProject(modal.id, newProjectId)) : undefined}
           />
         )}
       </AnimatePresence>

@@ -249,6 +249,26 @@ export function useStore() {
     await deleteDoc(doc(db, 'tasks', id));
   }, []);
 
+  // Reassign a task to another project. Consumes a new taskNumber from the
+  // destination project's counter so the new display ID matches its scheme
+  // (e.g. moving a task into project SEC gives it SEC-<next>).
+  const moveTaskToProject = useCallback(async (taskId: string, newProjectId: string) => {
+    if (!user) return;
+    const task = data.tasks.find(t => t.id === taskId);
+    if (!task || task.projectId === newProjectId) return;
+    const newProject = data.projects.find(p => p.id === newProjectId);
+    if (!newProject) return;
+    const nextNumber = (newProject.taskCounter ?? 0) + 1;
+    // Optimistic: bump counter and reassign the task in local state
+    setData(d => ({
+      ...d,
+      projects: d.projects.map(p => p.id === newProjectId ? { ...p, taskCounter: nextNumber } : p),
+      tasks: d.tasks.map(t => t.id === taskId ? { ...t, projectId: newProjectId, taskNumber: nextNumber } : t),
+    }));
+    await updateDoc(doc(db, 'projects', newProjectId), { taskCounter: nextNumber });
+    await updateDoc(doc(db, 'tasks', taskId), { projectId: newProjectId, taskNumber: nextNumber });
+  }, [user, data.tasks, data.projects]);
+
   // --- Inbox ---
   const addInboxItem = useCallback(async (item: Omit<InboxItem, 'id' | 'createdAt'>) => {
     if (!user) return null;
@@ -432,6 +452,7 @@ export function useStore() {
     addTask,
     updateTask,
     deleteTask,
+    moveTaskToProject,
     addInboxItem,
     enrichUrlInboxItem,
     removeInboxItem,
