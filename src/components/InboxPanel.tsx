@@ -372,13 +372,11 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                     className="px-4 py-3"
                   >
                     <div className="flex items-start gap-2">
-                      {item.type === 'link' ? (
-                        <Link2 className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      ) : item.type === 'image' ? (
+                      {item.type === 'image' ? (
                         <ImageIcon className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                      ) : (
+                      ) : item.type === 'note' ? (
                         <FileText className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                      )}
+                      ) : null}
                       <div className="flex-1 min-w-0">
                         {item.type === 'image' ? (() => {
                           // Content can be a bare URL or "caption\n\n![image](url)"
@@ -398,8 +396,48 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                               </a>
                             </div>
                           );
+                        })() : item.type === 'link' ? (() => {
+                          const url = item.content.trim();
+                          let hostname = url;
+                          let path = '';
+                          try {
+                            const u = new URL(url);
+                            hostname = u.hostname.replace(/^www\./, '');
+                            path = (u.pathname + u.search + u.hash).replace(/\/$/, '');
+                          } catch {}
+                          const favicon = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                          return (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-start gap-2 group"
+                              title={url}
+                            >
+                              <img
+                                src={favicon}
+                                alt=""
+                                width={16}
+                                height={16}
+                                className="mt-0.5 rounded-sm shrink-0"
+                                loading="lazy"
+                                onError={e => (e.currentTarget.style.display = 'none')}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                  {hostname}
+                                </div>
+                                {path && (
+                                  <div className="text-[11px] text-muted-foreground truncate">
+                                    {path}
+                                  </div>
+                                )}
+                              </div>
+                              <Link2 className="w-3 h-3 text-muted-foreground/60 shrink-0 mt-1 group-hover:text-primary transition-colors" />
+                            </a>
+                          );
                         })() : (
-                          <p className="text-sm text-foreground break-all">{item.content}</p>
+                          <p className="text-sm text-foreground break-words whitespace-pre-wrap">{item.content}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
