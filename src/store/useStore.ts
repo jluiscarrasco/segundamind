@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { db } from '@/integrations/firebase/config';
+import { db, storage } from '@/integrations/firebase/config';
+import { ref as storageRef, deleteObject } from 'firebase/storage';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
 import type { Area, Project, Task, InboxItem, Resource, WikiPage, EntityType } from '@/types';
@@ -286,11 +287,38 @@ export function useStore() {
   }, []);
 
   const removeInboxItem = useCallback(async (id: string) => {
+    const item = data.inbox.find(i => i.id === id);
     setData(d => ({ ...d, inbox: d.inbox.filter(i => i.id !== id) }));
     await deleteDoc(doc(db, 'inbox_items', id));
-  }, []);
+    // If it was an image, best-effort delete the file from Storage too so
+    // discarding an inbox item does not leave orphan blobs behind.
+    if (item?.type === 'image') {
+      const url = extractImageUrl(item.content);
+      if (url) await deleteStorageFile(url);
+    }
+  }, [data.inbox]);
 
-  const convertInboxToTask = useCallback(async (inboxId: string, projectId: string, importance: Task['importance'], taskName?: string, taskDescription?: string) => {
+  // Pull the storage URL out of an inbox image item's content.
+  // Content is either a bare URL or "caption\n\n![image](url)".
+  const extractImageUrl = (content: string): string | null => {
+    const md = content.match(/!\[[^\]]*\]\(([^)]+)\)/);
+    const candidate = (md ? md[1] : content).trim();
+    return candidate.startsWith('http') && candidate.includes('firebasestorage.googleapis.com')
+      ? candidate
+      : null;
+  };
+
+  // Best-effort delete of a Firebase Storage file from its download URL.
+  const deleteStorageFile = async (url: string) => {
+    try {
+      const r = storageRef(storage, url);
+      await deleteObject(r);
+    } catch (err) {
+      console.warn('[storage] delete failed', err);
+    }
+  };
+
+  const convertInboxToTask = useCallback(async (inboxId: string, projectId: string, importance: Task['importance'], taskName?: string, taskDescription?: string, opts?: { discardImage?: boolean }) => {
     if (!user) return;
     const item = data.inbox.find(i => i.id === inboxId);
     if (!item) return;
@@ -315,16 +343,32 @@ export function useStore() {
       createdAt: serverTimestamp(),
     });
 
-    // Auto-attach URL or image as resource if inbox item is a link or image
-    if (item.type === 'link' || item.type === 'image') {
+    // Auto-attach URL or image as resource if inbox item is a link or image.
+    // Images can be discarded via opts.discardImage — we skip the resource
+    // AND delete the file from Firebase Storage to reclaim the space.
+    if (item.type === 'link') {
       await addDoc(collection(db, 'resources'), {
         entityType: 'task',
         entityId: taskDocRef.id,
-        type: item.type,
+        type: 'link',
         content: item.content,
         userId: user.uid,
         createdAt: serverTimestamp(),
       });
+    } else if (item.type === 'image') {
+      if (opts?.discardImage) {
+        const url = extractImageUrl(item.content);
+        if (url) await deleteStorageFile(url);
+      } else {
+        await addDoc(collection(db, 'resources'), {
+          entityType: 'task',
+          entityId: taskDocRef.id,
+          type: 'image',
+          content: item.content,
+          userId: user.uid,
+          createdAt: serverTimestamp(),
+        });
+      }
     }
 
     // Delete inbox item
@@ -340,30 +384,38 @@ export function useStore() {
     }));
   }, [user, data.inbox, data.projects]);
 
-  const attachInboxAsNote = useCallback(async (inboxId: string, entityType: EntityType, entityId: string) => {
+  const attachInboxAsNote = useCallback(async (inboxId: string, entityType: EntityType, entityId: string, opts?: { discardImage?: boolean }) => {
     if (!user) return;
     const item = data.inbox.find(i => i.id === inboxId);
     if (!item) return;
 
     const batch = writeBatch(db);
 
-    // Attach the inbox item as a single resource whose type matches the item.
-    // Previously this always added a `note` resource on top of the link/image
-    // resource, which duplicated the URL in the entity's links section.
-    const resDocRef = doc(collection(db, 'resources'));
-    batch.set(resDocRef, {
-      entityType,
-      entityId,
-      type: item.type,
-      content: item.content,
-      userId: user.uid,
-      createdAt: serverTimestamp(),
-    });
+    // Attach the inbox item as a single resource whose type matches the item —
+    // unless it is an image and the caller opted to discard it, in which case
+    // we only delete the storage file and drop the inbox item.
+    if (!(item.type === 'image' && opts?.discardImage)) {
+      const resDocRef = doc(collection(db, 'resources'));
+      batch.set(resDocRef, {
+        entityType,
+        entityId,
+        type: item.type,
+        content: item.content,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+    }
 
     // Delete inbox item
     batch.delete(doc(db, 'inbox_items', inboxId));
 
     await batch.commit();
+
+    // Discarded image: reclaim the storage space after Firestore succeeds.
+    if (item.type === 'image' && opts?.discardImage) {
+      const url = extractImageUrl(item.content);
+      if (url) await deleteStorageFile(url);
+    }
 
     // Only optimistic-remove the inbox item; the resources onSnapshot listener
     // will pick up the new documents and appending here would duplicate them.

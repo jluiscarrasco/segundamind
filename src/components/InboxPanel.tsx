@@ -19,8 +19,8 @@ interface InboxPanelProps {
   tasks: Task[];
   onAdd: (item: Omit<InboxItem, 'id' | 'createdAt'>) => Promise<InboxItem | null> | void;
   onRemove: (id: string) => void;
-  onConvertToTask: (inboxId: string, projectId: string, importance: Importance, name?: string, description?: string) => void;
-  onAttachAsNote: (inboxId: string, entityType: EntityType, entityId: string) => void;
+  onConvertToTask: (inboxId: string, projectId: string, importance: Importance, name?: string, description?: string, opts?: { discardImage?: boolean }) => void;
+  onAttachAsNote: (inboxId: string, entityType: EntityType, entityId: string, opts?: { discardImage?: boolean }) => void;
   onEnrichUrl?: (inboxId: string, url: string) => void;
   isOpen: boolean;
   onToggle: () => void;
@@ -30,6 +30,9 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const { user } = useAuth();
   const [input, setInput] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  // For image inbox items: keep the image attached (true) or discard the
+  // file when processing (false). Defaults to keeping.
+  const [keepImage, setKeepImage] = useState(true);
   const [convertMode, setConvertMode] = useState<ConvertMode>('task');
   const [selectedArea, setSelectedArea] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
@@ -197,13 +200,17 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
 
   const handleConvertToTask = (id: string) => {
     if (!selectedProject) return;
-    onConvertToTask(id, selectedProject, selectedImportance, taskName || undefined, taskDescription || undefined);
+    const item = items.find(i => i.id === id);
+    const opts = item?.type === 'image' ? { discardImage: !keepImage } : undefined;
+    onConvertToTask(id, selectedProject, selectedImportance, taskName || undefined, taskDescription || undefined, opts);
     resetProcessing();
   };
 
   const handleAttachAsNote = (id: string) => {
     if (!noteEntityId) return;
-    onAttachAsNote(id, noteEntityType, noteEntityId);
+    const item = items.find(i => i.id === id);
+    const opts = item?.type === 'image' ? { discardImage: !keepImage } : undefined;
+    onAttachAsNote(id, noteEntityType, noteEntityId, opts);
     resetProcessing();
   };
 
@@ -217,6 +224,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
     setConvertMode('task');
     setNoteEntityType('project');
     setNoteEntityId('');
+    setKeepImage(true);
   };
 
   const getAreaForProject = (projectId: string) => {
@@ -431,6 +439,24 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                             <div className="flex items-start gap-1.5 text-xs text-muted-foreground bg-secondary/50 rounded-md px-2 py-1.5">
                               <Sparkles className="w-3 h-3 text-primary mt-0.5 shrink-0" />
                               <span>{aiReasoning}</span>
+                            </div>
+                          )}
+
+                          {/* Image-only: keep the file attached, or discard it to save storage */}
+                          {item.type === 'image' && (
+                            <div className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/60">
+                              <label className="flex items-center gap-1.5 cursor-pointer flex-1">
+                                <input
+                                  type="checkbox"
+                                  checked={keepImage}
+                                  onChange={e => setKeepImage(e.target.checked)}
+                                  className="w-3.5 h-3.5 accent-primary cursor-pointer"
+                                />
+                                <span className="text-foreground">Adjuntar imagen</span>
+                              </label>
+                              <span className="text-[10px] text-muted-foreground">
+                                {keepImage ? 'se guardará como recurso' : 'se borrará al procesar'}
+                              </span>
                             </div>
                           )}
 
