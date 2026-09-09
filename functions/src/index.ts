@@ -320,39 +320,58 @@ router.post('/wiki-generate', async (req, res) => {
     const userId = await verifyToken(req.headers.authorization || '');
     await checkRateLimit(userId);
     await checkAppCheckToken(req);
-    const { title, entityType, entityId } = req.body;
+    const { draft, title: providedTitle, entityName, entityType } = req.body;
 
-    if (!title) {
-      res.status(400).json({ error: 'Title required' });
+    // Accept either a rough draft (from the "generate from draft" flow) or a
+    // title (older callers). At least one must be present.
+    if (!draft && !providedTitle) {
+      res.status(400).json({ error: 'Draft or title required' });
       return;
     }
 
-    const prompt = `Generate a comprehensive wiki page for: "${title}" (${entityType}: ${entityId})
+    const contextLine = entityName
+      ? `Contexto: pertenece a ${entityType || 'entidad'} "${entityName}".`
+      : '';
 
-Write in markdown format. Include:
-- Clear title
-- Overview section
-- Key points (if applicable)
-- References or related topics
+    const prompt = draft
+      ? `Eres un asistente que convierte un borrador en una página de wiki bien estructurada en Markdown.
+${contextLine}
 
-IMPORTANT: Write the entire page in the SAME LANGUAGE as the title above (if the title is in Spanish, write in Spanish).`;
+Borrador del usuario:
+"""
+${draft}
+"""
 
-    const content = await callAI(prompt);
+Devuelve JSON con esta forma exacta:
+{
+  "title": "título corto (máx 60 caracteres) que capture el tema principal",
+  "content": "página completa en Markdown: introducción, secciones con ##, listas y enlaces si procede. NO incluyas el título como # dentro del contenido — solo el cuerpo."
+}
 
-    // Save to Firestore
-    const docRef = await db.collection('wiki_pages').add({
-      userId,
-      entityType,
-      entityId,
-      title,
-      content,
-      position: 0,
-      parentId: null,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+IMPORTANTE:
+- Escribe TODO en el mismo idioma que el borrador (si el borrador es español, en español).
+- El título debe ser específico y útil para buscar, no genérico.
+- Responde SOLO con el JSON, sin texto adicional.`
+      : `Eres un asistente que redacta páginas de wiki bien estructuradas en Markdown.
+${contextLine}
+
+Escribe una página completa sobre: "${providedTitle}".
+
+Devuelve JSON con esta forma exacta:
+{
+  "title": "${providedTitle}",
+  "content": "página completa en Markdown: introducción, secciones con ##, listas y enlaces si procede. NO incluyas el título como # dentro del contenido — solo el cuerpo."
+}
+
+IMPORTANTE: escribe en el mismo idioma que el título. Responde SOLO con el JSON.`;
+
+    const aiResponse = await callAI(prompt, undefined, true);
+    const parsed = parseJsonResponse(aiResponse);
+
+    res.json({
+      title: parsed?.title || providedTitle || 'Sin título',
+      content: parsed?.content || '',
     });
-
-    res.json({ id: docRef.id, content });
   } catch (error: any) {
     sendError(res, error);
   }
