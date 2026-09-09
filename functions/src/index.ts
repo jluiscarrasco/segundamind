@@ -124,7 +124,7 @@ function sendError(res: express.Response, error: any) {
 // response_format) and lowers the temperature — use it for every endpoint that
 // feeds parseJsonResponse, otherwise the model occasionally returns malformed
 // JSON (unescaped quotes, stray prose) and parsing fails.
-async function callAI(prompt: string, systemPrompt?: string, jsonMode = false) {
+async function callAI(prompt: string, systemPrompt?: string, jsonMode = false, maxTokens = 1024) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('LLM API key not configured');
 
@@ -137,7 +137,7 @@ async function callAI(prompt: string, systemPrompt?: string, jsonMode = false) {
         { role: 'user', content: prompt }
       ],
       temperature: jsonMode ? 0.2 : 0.7,
-      max_tokens: 1024,
+      max_tokens: maxTokens,
       ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
     },
     {
@@ -362,7 +362,9 @@ ${providedTitle}
 ===CONTENT===
 <página completa en Markdown en el mismo idioma que el título>`;
 
-    const aiResponse = await callAI(prompt);
+    // Wiki pages can be long, especially when the user pastes a large draft.
+    // Give the model plenty of room so the output is not truncated mid-page.
+    const aiResponse = await callAI(prompt, undefined, false, 16000);
 
     // Parse the delimited response
     const titleMatch = aiResponse.match(/===TITLE===\s*([\s\S]*?)\s*===CONTENT===/i);
@@ -410,7 +412,8 @@ Instruction: ${instruction}
 Return the updated content in markdown format.
 IMPORTANT: Write in the SAME LANGUAGE as the current content above (if it is in Spanish, answer in Spanish).`;
 
-    const updatedContent = await callAI(prompt);
+    // Same rationale as wiki-generate: full-page edits need room to breathe.
+    const updatedContent = await callAI(prompt, undefined, false, 16000);
 
     // Update in Firestore
     await db.collection('wiki_pages').doc(pageId).update({
