@@ -40,17 +40,24 @@ export default defineConfig(({ mode }) => ({
         ],
         share_target: {
           action: "/share",
-          method: "GET",
+          method: "POST",
+          enctype: "multipart/form-data",
           params: {
             title: "title",
             text: "text",
             url: "url",
+            files: [
+              {
+                name: "media",
+                accept: ["image/*"],
+              },
+            ],
           },
         },
       },
       workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-        importScripts: ['/sw-push.js'],
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/share$/],
+        importScripts: ['/sw-push.js', '/sw-share.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
     }),

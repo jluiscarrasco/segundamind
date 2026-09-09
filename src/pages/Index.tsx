@@ -24,6 +24,9 @@ import { MobileNoteCaptureView } from '@/components/MobileNoteCaptureView';
 
 import { useStoreContext } from '@/store/StoreContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
+import { storage } from '@/integrations/firebase/config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { EntityType } from '@/types';
 import { getTaskDisplayId } from '@/types';
 import { addDaysCETKey, getTodayKeyCET } from '@/lib/dateUtils';
@@ -43,6 +46,7 @@ export type ViewMode = 'dashboard' | 'calendar' | 'backlog' | 'knowledge' | 'fil
 const Index = () => {
   const store = useStoreContext();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -104,26 +108,66 @@ const Index = () => {
     }
   }, [store.tasks]);
 
-  // Handle PWA Share Target — captures URL/text shared from other apps
+  // Handle PWA Share Target — captures URL/text/images shared from other apps.
+  // Files come through the service worker (sw-share.js): they are POSTed to
+  // /share, the SW stores them in Cache Storage and redirects here with the
+  // cache keys in the `files` query param.
   useEffect(() => {
     if (window.location.pathname !== '/share') return;
     const params = new URLSearchParams(window.location.search);
     const url = params.get('url') || '';
     const title = params.get('title') || '';
     const text = params.get('text') || '';
+    const fileKeys = (params.get('files') || '').split(',').filter(Boolean);
 
-    // Extract URL from any field (Android's share_target puts it in different places
-    // depending on the source app — Instagram usually stuffs it into `text`).
+    // Clean the URL now so a refresh does not re-run this effect.
+    window.history.replaceState({}, '', '/');
+
     const urlInText = text.match(/https?:\/\/\S+/)?.[0];
     const urlInTitle = title.match(/https?:\/\/\S+/)?.[0];
     const finalUrl = url || urlInText || urlInTitle || '';
 
-    // If we found a URL, save ONLY the URL as the inbox content — the frontend
-    // detects a bare URL and routes it through enrich-url (proper scraping) instead
-    // of classify-inbox (plain-text classifier). Title/text from Instagram is
-    // redundant with what scraping will get.
-    const content = finalUrl || [title, text].filter(Boolean).join('\n').trim();
+    // Handle shared images: pull each file from Cache Storage, upload to
+    // Firebase Storage, then drop an inbox_item of type 'image' with the URL.
+    if (fileKeys.length > 0) {
+      if (!user) {
+        toast.error('Inicia sesión para guardar la imagen');
+        return;
+      }
+      (async () => {
+        const cache = await caches.open('share-target-v1');
+        let imported = 0;
+        const captionParts = [title, text].filter(Boolean);
+        for (const key of fileKeys) {
+          try {
+            const resp = await cache.match(`/__share__/${key}`);
+            if (!resp) continue;
+            const blob = await resp.blob();
+            const filenameHeader = resp.headers.get('X-Filename');
+            const filename = filenameHeader ? decodeURIComponent(filenameHeader) : 'shared-image';
+            const ext = filename.split('.').pop()?.toLowerCase() || (blob.type.split('/')[1] || 'jpg');
+            const path = `${user.uid}/inbox/${crypto.randomUUID()}.${ext}`;
+            const fileRef = ref(storage, path);
+            await uploadBytes(fileRef, blob);
+            const imageUrl = await getDownloadURL(fileRef);
+            const content = captionParts.length
+              ? `${captionParts.join('\n')}\n\n![image](${imageUrl})`
+              : imageUrl;
+            await store.addInboxItem({ content, type: 'image' });
+            await cache.delete(`/__share__/${key}`);
+            imported++;
+          } catch (err) {
+            console.error('Share import (image) failed', err);
+          }
+        }
+        if (imported > 0) toast.success(imported === 1 ? 'Imagen guardada en el Inbox' : `${imported} imágenes guardadas`);
+        else toast.error('No se pudo guardar la imagen');
+      })();
+      return;
+    }
 
+    // No files — plain URL/text share
+    const content = finalUrl || [title, text].filter(Boolean).join('\n').trim();
     if (content) {
       const type: 'link' | 'note' = finalUrl ? 'link' : 'note';
       store.addInboxItem({ content, type }).then(() => {
@@ -133,10 +177,7 @@ const Index = () => {
         toast.error('No se pudo guardar');
       });
     }
-
-    // Clean URL and land the user on the home view
-    window.history.replaceState({}, '', '/');
-  }, []);
+  }, [user]);
 
   // Quick inline edit handler (for status, importance, date, effort - Phase 2)
   const handleQuickEditTask = useCallback((taskId: string, field: keyof typeof store.tasks[0], value: any) => {
