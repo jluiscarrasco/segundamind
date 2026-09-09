@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadBytes, ref, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Inbox, Send, Link2, FileText, Trash2, ArrowRightCircle, Sparkles, Loader2, StickyNote, ListChecks, Upload, Paperclip, Mic, StopCircle, RotateCcw } from 'lucide-react';
+import { Inbox, Send, Link2, FileText, Trash2, ArrowRightCircle, Sparkles, Loader2, StickyNote, ListChecks, Upload, Paperclip, Mic, StopCircle, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
@@ -366,10 +366,34 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                     <div className="flex items-start gap-2">
                       {item.type === 'link' ? (
                         <Link2 className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      ) : item.type === 'image' ? (
+                        <ImageIcon className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                       ) : (
                         <FileText className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                       )}
-                      <p className="text-sm text-foreground flex-1 break-all">{item.content}</p>
+                      <div className="flex-1 min-w-0">
+                        {item.type === 'image' ? (() => {
+                          // Content can be a bare URL or "caption\n\n![image](url)"
+                          const mdMatch = item.content.match(/!\[[^\]]*\]\(([^)]+)\)/);
+                          const imgUrl = mdMatch ? mdMatch[1] : item.content.trim();
+                          const caption = mdMatch ? item.content.replace(mdMatch[0], '').trim() : '';
+                          return (
+                            <div className="space-y-1.5">
+                              {caption && <p className="text-sm text-foreground break-words">{caption}</p>}
+                              <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                <img
+                                  src={imgUrl}
+                                  alt="Compartida"
+                                  className="max-h-48 max-w-full rounded-md border border-border object-contain bg-secondary/40"
+                                  loading="lazy"
+                                />
+                              </a>
+                            </div>
+                          );
+                        })() : (
+                          <p className="text-sm text-foreground break-all">{item.content}</p>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => handleProcess(item.id)}
