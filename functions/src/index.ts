@@ -333,45 +333,44 @@ router.post('/wiki-generate', async (req, res) => {
       ? `Contexto: pertenece a ${entityType || 'entidad'} "${entityName}".`
       : '';
 
+    // Use delimiters instead of JSON: Markdown content with quotes/newlines
+    // breaks JSON.parse too often, even with json_mode enabled.
     const prompt = draft
       ? `Eres un asistente que convierte un borrador en una página de wiki bien estructurada en Markdown.
 ${contextLine}
 
 Borrador del usuario:
-"""
 ${draft}
-"""
 
-Devuelve JSON con esta forma exacta:
-{
-  "title": "título corto (máx 60 caracteres) que capture el tema principal",
-  "content": "página completa en Markdown: introducción, secciones con ##, listas y enlaces si procede. NO incluyas el título como # dentro del contenido — solo el cuerpo."
-}
+Devuelve tu respuesta EXACTAMENTE con este formato (sin explicaciones extra):
 
-IMPORTANTE:
-- Escribe TODO en el mismo idioma que el borrador (si el borrador es español, en español).
-- El título debe ser específico y útil para buscar, no genérico.
-- Responde SOLO con el JSON, sin texto adicional.`
+===TITLE===
+<un título corto, máximo 60 caracteres, específico y útil para buscar>
+===CONTENT===
+<página completa en Markdown: introducción, secciones con ##, listas y enlaces si procede. NO incluyas el título como # dentro del contenido — solo el cuerpo.>
+
+IMPORTANTE: escribe TODO en el mismo idioma que el borrador.`
       : `Eres un asistente que redacta páginas de wiki bien estructuradas en Markdown.
 ${contextLine}
 
 Escribe una página completa sobre: "${providedTitle}".
 
-Devuelve JSON con esta forma exacta:
-{
-  "title": "${providedTitle}",
-  "content": "página completa en Markdown: introducción, secciones con ##, listas y enlaces si procede. NO incluyas el título como # dentro del contenido — solo el cuerpo."
-}
+Devuelve tu respuesta EXACTAMENTE con este formato:
 
-IMPORTANTE: escribe en el mismo idioma que el título. Responde SOLO con el JSON.`;
+===TITLE===
+${providedTitle}
+===CONTENT===
+<página completa en Markdown en el mismo idioma que el título>`;
 
-    const aiResponse = await callAI(prompt, undefined, true);
-    const parsed = parseJsonResponse(aiResponse);
+    const aiResponse = await callAI(prompt);
 
-    res.json({
-      title: parsed?.title || providedTitle || 'Sin título',
-      content: parsed?.content || '',
-    });
+    // Parse the delimited response
+    const titleMatch = aiResponse.match(/===TITLE===\s*([\s\S]*?)\s*===CONTENT===/i);
+    const contentMatch = aiResponse.match(/===CONTENT===\s*([\s\S]*)$/i);
+    const title = (titleMatch?.[1] || providedTitle || draft?.split('\n')[0]?.slice(0, 60) || 'Sin título').trim();
+    const content = (contentMatch?.[1] || aiResponse).trim();
+
+    res.json({ title, content });
   } catch (error: any) {
     sendError(res, error);
   }
