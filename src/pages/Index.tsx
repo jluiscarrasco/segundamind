@@ -135,8 +135,27 @@ const Index = () => {
     const swStored = params.get('stored');
     const swFields = params.get('fields') || '';
     const swCt = params.get('ct') || '';
+    const swBytes = params.get('bytes') || '';
+    const swCl = params.get('cl') || '';
     const swError = params.get('error');
-    console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swFields, swCt, swError });
+    console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swFields, swCt, swBytes, swCl, swError });
+
+    // Copyable error toast — one-tap copy so we can debug from the phone
+    // without having to screenshot the message.
+    const errorToast = (short: string, full: string) => {
+      toast.error(short, {
+        duration: 30000,
+        action: {
+          label: 'Copiar',
+          onClick: () => {
+            navigator.clipboard.writeText(full).then(
+              () => toast.success('Copiado al portapapeles'),
+              () => toast.error('No se pudo copiar'),
+            );
+          },
+        },
+      });
+    };
 
     // Now that we're committed to processing, clean the URL so a refresh
     // does not re-run this effect.
@@ -144,23 +163,24 @@ const Index = () => {
 
     // Distinguish "SW ran but got nothing" from "SW never intercepted".
     if (!swRan && fileKeys.length === 0 && !url && !title && !text) {
-      toast.error('El service worker no interceptó el share. Cierra la app y reinstálala desde el navegador.');
+      errorToast(
+        'El service worker no interceptó el share',
+        `sw-not-intercepted url=${window.location.href}`,
+      );
       return;
     }
 
     if (swError) {
-      toast.error(`SW error: ${swError}`);
+      errorToast(
+        `SW error: ${swError}`,
+        `sw-error error="${swError}" ct=${swCt} bytes=${swBytes} cl=${swCl} fields=[${swFields}]`,
+      );
       return;
     }
 
     if (swRan && fileKeys.length === 0) {
-      const detail = [
-        `n=${swSaw ?? '?'}`,
-        `stored=${swStored ?? '?'}`,
-        swFields ? `fields=[${swFields}]` : 'fields=none',
-        swCt ? `ct=${swCt}` : '',
-      ].filter(Boolean).join(' · ');
-      toast.error(`SW recibió el POST pero sin archivos. ${detail}`);
+      const detail = `sw-empty n=${swSaw ?? '?'} stored=${swStored ?? '?'} bytes=${swBytes || '?'} cl=${swCl || '?'} fields=[${swFields || 'none'}] ct=${swCt || '?'}`;
+      errorToast('SW recibió el POST pero sin archivos', detail);
       return;
     }
 

@@ -80,6 +80,13 @@ async function handleShare(request) {
   try {
     const ct = request.headers.get('content-type') || '';
     params.set('ct', ct.slice(0, 60));
+    const cl = request.headers.get('content-length') || '';
+    if (cl) params.set('cl', cl);
+
+    // Read the body first so we can report its true size — even if parsing
+    // then fails downstream.
+    const buf = new Uint8Array(await request.clone().arrayBuffer());
+    params.set('bytes', String(buf.length));
 
     const parts = await parseMultipart(request);
     params.set('n', String(parts.length));
