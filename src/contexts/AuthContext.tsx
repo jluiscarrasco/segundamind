@@ -39,7 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Reject accounts that are not on the allowlist
       if (firebaseUser && !isEmailAllowed(firebaseUser.email)) {
-        toast.error('Tu cuenta no está autorizada para usar esta aplicación.');
+        // Show the exact email Google returned + a hint of the allowlist
+        // so the user (or the admin over the shoulder) can spot mismatches
+        // like a wrong account, a typo in the env var, or a stale bundle.
+        const seen = firebaseUser.email || '(sin email)';
+        const preview = ALLOWED_EMAILS.slice(0, 3).join(', ') + (ALLOWED_EMAILS.length > 3 ? '…' : '');
+        toast.error(`Tu cuenta no está autorizada. Google devolvió: "${seen}". Autorizadas: ${preview}`, { duration: 15000 });
         await firebaseSignOut(auth);
         setUser(null);
         setLoading(false);
