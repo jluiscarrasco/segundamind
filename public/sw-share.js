@@ -3,73 +3,118 @@
 // the SPA can only read them via GET query params — so we save each file in
 // Cache Storage under a synthetic key and redirect to /share?files=<keys>,
 // then the client reads them back with caches.match().
+//
+// We do NOT use request.formData(): Chrome on Android returns an empty
+// FormData for many share_target POSTs even though the body is intact.
+// Instead we read request.arrayBuffer() and parse the multipart body by
+// hand — reliable and boundary-agnostic.
 
 const SHARE_CACHE = 'share-target-v1';
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  // Trim trailing slash so /share and /share/ both match.
-  const pathname = url.pathname.replace(/\/$/, '');
-  if (pathname !== '/share' || event.request.method !== 'POST') return;
+function indexOfBytes(hay, needle, start) {
+  outer: for (let i = start; i <= hay.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (hay[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
 
-  event.respondWith(handleShare(event.request));
-});
+// Parse a multipart/form-data body into [{ name, filename?, type, data }].
+// Handles CRLF between parts and strips the trailing CRLF from each part.
+async function parseMultipart(request) {
+  const ct = request.headers.get('content-type') || '';
+  const boundaryMatch = ct.match(/boundary=(?:"([^"]+)"|([^;\s]+))/i);
+  if (!boundaryMatch) throw new Error('missing multipart boundary');
+  const boundary = boundaryMatch[1] || boundaryMatch[2];
+
+  const buf = new Uint8Array(await request.arrayBuffer());
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+  const delim = enc.encode(`--${boundary}`);
+  const CRLF = 0x0d0a;
+
+  const entries = [];
+  let cursor = indexOfBytes(buf, delim, 0);
+  while (cursor !== -1) {
+    let partStart = cursor + delim.length;
+    // Check for terminating "--" after the boundary
+    if (buf[partStart] === 0x2d && buf[partStart + 1] === 0x2d) break;
+    // Skip CRLF after boundary
+    if (buf[partStart] === 0x0d && buf[partStart + 1] === 0x0a) partStart += 2;
+
+    const nextBoundary = indexOfBytes(buf, delim, partStart);
+    if (nextBoundary === -1) break;
+    // Part body ends at CRLF right before next boundary
+    let partEnd = nextBoundary;
+    if (buf[partEnd - 2] === 0x0d && buf[partEnd - 1] === 0x0a) partEnd -= 2;
+
+    // Split headers / body at first CRLFCRLF within the part
+    const headerEnd = indexOfBytes(buf, enc.encode('\r\n\r\n'), partStart);
+    if (headerEnd === -1 || headerEnd > partEnd) {
+      cursor = nextBoundary;
+      continue;
+    }
+    const headersText = dec.decode(buf.slice(partStart, headerEnd));
+    const bodyBytes = buf.slice(headerEnd + 4, partEnd);
+
+    const dispMatch = headersText.match(/content-disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]*)")?/i);
+    if (dispMatch) {
+      const name = dispMatch[1];
+      const filename = dispMatch[2];
+      const typeMatch = headersText.match(/content-type:\s*([^\r\n]+)/i);
+      const type = typeMatch ? typeMatch[1].trim() : (filename !== undefined ? 'application/octet-stream' : 'text/plain');
+      entries.push({ name, filename, type, data: bodyBytes });
+    }
+
+    cursor = nextBoundary;
+  }
+  return entries;
+}
 
 async function handleShare(request) {
-  // `sw=1` proves the service worker actually ran. If the client lands at
-  // /share without this marker, it means the POST bypassed the SW entirely.
   const params = new URLSearchParams();
   params.set('sw', '1');
 
   try {
-    // Log Content-Type up front — helps diagnose an empty formData when
-    // Android/Chrome sends something other than multipart/form-data.
     const ct = request.headers.get('content-type') || '';
     params.set('ct', ct.slice(0, 60));
 
-    const formData = await request.formData();
+    const parts = await parseMultipart(request);
+    params.set('n', String(parts.length));
 
-    // Iterate ALL fields instead of assuming a specific file field name.
-    // Some Android/Chrome versions ignore the manifest's `name` and use
-    // something else, which is exactly the failure mode we hit.
     const cache = await caches.open(SHARE_CACHE);
     const fileKeys = [];
-    const textFields = { title: '', text: '', url: '' };
-    const fieldNames = [];
-    let entryCount = 0;
+    const text = { title: '', text: '', url: '' };
+    const seenNames = [];
 
-    for (const [key, value] of formData.entries()) {
-      entryCount++;
-      fieldNames.push(key);
-      if (value instanceof Blob && value.size > 0) {
-        // Anything that came through as a Blob we treat as a shared file.
-        const cacheKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        const filename = value.name || `${key}-shared`;
-        const response = new Response(value, {
+    for (const part of parts) {
+      seenNames.push(part.name);
+      const isFile = part.filename !== undefined || part.type.startsWith('image/');
+      if (isFile && part.data.length > 0) {
+        const key = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const blob = new Blob([part.data], { type: part.type });
+        const response = new Response(blob, {
           headers: {
-            'Content-Type': value.type || 'application/octet-stream',
-            'X-Filename': encodeURIComponent(filename),
+            'Content-Type': part.type,
+            'X-Filename': encodeURIComponent(part.filename || `${part.name}-shared`),
           },
         });
-        await cache.put(`/__share__/${cacheKey}`, response);
-        fileKeys.push(cacheKey);
-      } else if (typeof value === 'string') {
-        // Route known text fields; anything else is ignored on purpose.
-        if (key === 'title' || key === 'text' || key === 'url') {
-          textFields[key] = value;
-        }
+        await cache.put(`/__share__/${key}`, response);
+        fileKeys.push(key);
+      } else if (!isFile) {
+        const value = new TextDecoder().decode(part.data);
+        if (part.name in text) text[part.name] = value;
       }
     }
-
-    params.set('n', String(entryCount));
     params.set('stored', String(fileKeys.length));
-    // Names Android actually used, deduped, useful for triage.
-    const uniqueNames = Array.from(new Set(fieldNames)).slice(0, 6).join(',');
+    const uniqueNames = Array.from(new Set(seenNames)).slice(0, 6).join(',');
     if (uniqueNames) params.set('fields', uniqueNames);
 
-    if (textFields.title) params.set('title', textFields.title);
-    if (textFields.text) params.set('text', textFields.text);
-    if (textFields.url) params.set('url', textFields.url);
+    if (text.title) params.set('title', text.title);
+    if (text.text) params.set('text', text.text);
+    if (text.url) params.set('url', text.url);
     if (fileKeys.length) params.set('files', fileKeys.join(','));
 
     return Response.redirect(`/share?${params.toString()}`, 303);
@@ -79,3 +124,12 @@ async function handleShare(request) {
     return Response.redirect(`/share?${params.toString()}`, 303);
   }
 }
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  // Trim trailing slash so /share and /share/ both match.
+  const pathname = url.pathname.replace(/\/$/, '');
+  if (pathname !== '/share' || event.request.method !== 'POST') return;
+
+  event.respondWith(handleShare(event.request));
+});
