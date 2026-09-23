@@ -114,13 +114,21 @@ const Index = () => {
   // cache keys in the `files` query param.
   useEffect(() => {
     if (window.location.pathname !== '/share') return;
+    // Firebase Auth resolves asynchronously. When Android launches the PWA
+    // via the share target, this effect runs BEFORE `user` is populated,
+    // and every path here needs `user` (uploading to Storage, writing the
+    // inbox item). Bail out without touching the URL so the effect re-runs
+    // when auth resolves and we still see the `?files=...` params.
+    if (!user) return;
+
     const params = new URLSearchParams(window.location.search);
     const url = params.get('url') || '';
     const title = params.get('title') || '';
     const text = params.get('text') || '';
     const fileKeys = (params.get('files') || '').split(',').filter(Boolean);
 
-    // Clean the URL now so a refresh does not re-run this effect.
+    // Now that we're committed to processing, clean the URL so a refresh
+    // does not re-run this effect.
     window.history.replaceState({}, '', '/');
 
     const urlInText = text.match(/https?:\/\/\S+/)?.[0];
@@ -130,10 +138,6 @@ const Index = () => {
     // Handle shared images: pull each file from Cache Storage, upload to
     // Firebase Storage, then drop an inbox_item of type 'image' with the URL.
     if (fileKeys.length > 0) {
-      if (!user) {
-        toast.error('Inicia sesión para guardar la imagen');
-        return;
-      }
       (async () => {
         const cache = await caches.open('share-target-v1');
         let imported = 0;
