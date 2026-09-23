@@ -130,15 +130,29 @@ const Index = () => {
     const title = params.get('title') || '';
     const text = params.get('text') || '';
     const fileKeys = (params.get('files') || '').split(',').filter(Boolean);
+    const swRan = params.get('sw') === '1';
+    const swSaw = params.get('n');
+    const swStored = params.get('stored');
     const swError = params.get('error');
-    console.log('[share] parsed', { url, title, text, fileKeys, swError });
+    console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swError });
 
     // Now that we're committed to processing, clean the URL so a refresh
     // does not re-run this effect.
     window.history.replaceState({}, '', '/');
 
+    // Distinguish "SW ran but got nothing" from "SW never intercepted".
+    if (!swRan && fileKeys.length === 0 && !url && !title && !text) {
+      toast.error('El service worker no interceptó el share. Cierra la app y reinstálala desde el navegador.');
+      return;
+    }
+
     if (swError) {
-      toast.error('El service worker no pudo procesar el share');
+      toast.error(`SW error: ${swError}`);
+      return;
+    }
+
+    if (swRan && fileKeys.length === 0) {
+      toast.error(`SW se ejecutó pero no llegaron archivos (saw ${swSaw}, stored ${swStored}). Probablemente la imagen se compartió con otro nombre de campo.`);
       return;
     }
 

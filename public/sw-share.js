@@ -8,18 +8,31 @@ const SHARE_CACHE = 'share-target-v1';
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.pathname !== '/share' || event.request.method !== 'POST') return;
+  // Trim trailing slash so /share and /share/ both match.
+  const pathname = url.pathname.replace(/\/$/, '');
+  if (pathname !== '/share' || event.request.method !== 'POST') return;
 
   event.respondWith(handleShare(event.request));
 });
 
 async function handleShare(request) {
+  // `sw=1` proves the service worker actually ran. If the client lands at
+  // /share without this marker, it means the POST bypassed the SW entirely.
+  const params = new URLSearchParams();
+  params.set('sw', '1');
+
   try {
     const formData = await request.formData();
     const title = formData.get('title') || '';
     const text = formData.get('text') || '';
     const shareUrl = formData.get('url') || '';
     const files = formData.getAll('media');
+
+    // Report what the SW actually saw. `n=` is the count of raw entries
+    // received (including zero-byte / non-blob ones); `stored` is how many
+    // ended up in the cache. Divergence points at the file field name or
+    // an unsupported blob type.
+    params.set('n', String(files.length));
 
     const cache = await caches.open(SHARE_CACHE);
     const fileKeys = [];
@@ -35,8 +48,8 @@ async function handleShare(request) {
       await cache.put(`/__share__/${key}`, response);
       fileKeys.push(key);
     }
+    params.set('stored', String(fileKeys.length));
 
-    const params = new URLSearchParams();
     if (title) params.set('title', title);
     if (text) params.set('text', text);
     if (shareUrl) params.set('url', shareUrl);
@@ -45,6 +58,7 @@ async function handleShare(request) {
     return Response.redirect(`/share?${params.toString()}`, 303);
   } catch (err) {
     console.error('[sw-share] failed', err);
-    return Response.redirect('/share?error=1', 303);
+    params.set('error', (err && err.message) ? String(err.message).slice(0, 120) : '1');
+    return Response.redirect(`/share?${params.toString()}`, 303);
   }
 }
