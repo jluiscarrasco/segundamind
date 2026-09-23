@@ -22,37 +22,54 @@ async function handleShare(request) {
   params.set('sw', '1');
 
   try {
+    // Log Content-Type up front — helps diagnose an empty formData when
+    // Android/Chrome sends something other than multipart/form-data.
+    const ct = request.headers.get('content-type') || '';
+    params.set('ct', ct.slice(0, 60));
+
     const formData = await request.formData();
-    const title = formData.get('title') || '';
-    const text = formData.get('text') || '';
-    const shareUrl = formData.get('url') || '';
-    const files = formData.getAll('media');
 
-    // Report what the SW actually saw. `n=` is the count of raw entries
-    // received (including zero-byte / non-blob ones); `stored` is how many
-    // ended up in the cache. Divergence points at the file field name or
-    // an unsupported blob type.
-    params.set('n', String(files.length));
-
+    // Iterate ALL fields instead of assuming a specific file field name.
+    // Some Android/Chrome versions ignore the manifest's `name` and use
+    // something else, which is exactly the failure mode we hit.
     const cache = await caches.open(SHARE_CACHE);
     const fileKeys = [];
-    for (const file of files) {
-      if (!(file instanceof Blob) || file.size === 0) continue;
-      const key = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      const response = new Response(file, {
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-          'X-Filename': encodeURIComponent(file.name || 'shared-image'),
-        },
-      });
-      await cache.put(`/__share__/${key}`, response);
-      fileKeys.push(key);
-    }
-    params.set('stored', String(fileKeys.length));
+    const textFields = { title: '', text: '', url: '' };
+    const fieldNames = [];
+    let entryCount = 0;
 
-    if (title) params.set('title', title);
-    if (text) params.set('text', text);
-    if (shareUrl) params.set('url', shareUrl);
+    for (const [key, value] of formData.entries()) {
+      entryCount++;
+      fieldNames.push(key);
+      if (value instanceof Blob && value.size > 0) {
+        // Anything that came through as a Blob we treat as a shared file.
+        const cacheKey = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const filename = value.name || `${key}-shared`;
+        const response = new Response(value, {
+          headers: {
+            'Content-Type': value.type || 'application/octet-stream',
+            'X-Filename': encodeURIComponent(filename),
+          },
+        });
+        await cache.put(`/__share__/${cacheKey}`, response);
+        fileKeys.push(cacheKey);
+      } else if (typeof value === 'string') {
+        // Route known text fields; anything else is ignored on purpose.
+        if (key === 'title' || key === 'text' || key === 'url') {
+          textFields[key] = value;
+        }
+      }
+    }
+
+    params.set('n', String(entryCount));
+    params.set('stored', String(fileKeys.length));
+    // Names Android actually used, deduped, useful for triage.
+    const uniqueNames = Array.from(new Set(fieldNames)).slice(0, 6).join(',');
+    if (uniqueNames) params.set('fields', uniqueNames);
+
+    if (textFields.title) params.set('title', textFields.title);
+    if (textFields.text) params.set('text', textFields.text);
+    if (textFields.url) params.set('url', textFields.url);
     if (fileKeys.length) params.set('files', fileKeys.join(','));
 
     return Response.redirect(`/share?${params.toString()}`, 303);

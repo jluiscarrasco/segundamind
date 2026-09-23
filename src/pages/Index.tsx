@@ -133,8 +133,10 @@ const Index = () => {
     const swRan = params.get('sw') === '1';
     const swSaw = params.get('n');
     const swStored = params.get('stored');
+    const swFields = params.get('fields') || '';
+    const swCt = params.get('ct') || '';
     const swError = params.get('error');
-    console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swError });
+    console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swFields, swCt, swError });
 
     // Now that we're committed to processing, clean the URL so a refresh
     // does not re-run this effect.
@@ -152,7 +154,13 @@ const Index = () => {
     }
 
     if (swRan && fileKeys.length === 0) {
-      toast.error(`SW se ejecutó pero no llegaron archivos (saw ${swSaw}, stored ${swStored}). Probablemente la imagen se compartió con otro nombre de campo.`);
+      const detail = [
+        `n=${swSaw ?? '?'}`,
+        `stored=${swStored ?? '?'}`,
+        swFields ? `fields=[${swFields}]` : 'fields=none',
+        swCt ? `ct=${swCt}` : '',
+      ].filter(Boolean).join(' · ');
+      toast.error(`SW recibió el POST pero sin archivos. ${detail}`);
       return;
     }
 
