@@ -114,22 +114,33 @@ const Index = () => {
   // cache keys in the `files` query param.
   useEffect(() => {
     if (window.location.pathname !== '/share') return;
+    console.log('[share] arrived at /share with', window.location.search);
     // Firebase Auth resolves asynchronously. When Android launches the PWA
     // via the share target, this effect runs BEFORE `user` is populated,
     // and every path here needs `user` (uploading to Storage, writing the
     // inbox item). Bail out without touching the URL so the effect re-runs
     // when auth resolves and we still see the `?files=...` params.
-    if (!user) return;
+    if (!user) {
+      console.log('[share] waiting for auth');
+      return;
+    }
 
     const params = new URLSearchParams(window.location.search);
     const url = params.get('url') || '';
     const title = params.get('title') || '';
     const text = params.get('text') || '';
     const fileKeys = (params.get('files') || '').split(',').filter(Boolean);
+    const swError = params.get('error');
+    console.log('[share] parsed', { url, title, text, fileKeys, swError });
 
     // Now that we're committed to processing, clean the URL so a refresh
     // does not re-run this effect.
     window.history.replaceState({}, '', '/');
+
+    if (swError) {
+      toast.error('El service worker no pudo procesar el share');
+      return;
+    }
 
     const urlInText = text.match(/https?:\/\/\S+/)?.[0];
     const urlInTitle = title.match(/https?:\/\/\S+/)?.[0];
@@ -141,11 +152,12 @@ const Index = () => {
       (async () => {
         const cache = await caches.open('share-target-v1');
         let imported = 0;
+        let missing = 0;
         const captionParts = [title, text].filter(Boolean);
         for (const key of fileKeys) {
           try {
             const resp = await cache.match(`/__share__/${key}`);
-            if (!resp) continue;
+            if (!resp) { missing++; console.warn('[share] cache miss', key); continue; }
             const blob = await resp.blob();
             const filenameHeader = resp.headers.get('X-Filename');
             const filename = filenameHeader ? decodeURIComponent(filenameHeader) : 'shared-image';
@@ -161,10 +173,11 @@ const Index = () => {
             await cache.delete(`/__share__/${key}`);
             imported++;
           } catch (err) {
-            console.error('Share import (image) failed', err);
+            console.error('[share] import failed', err);
           }
         }
         if (imported > 0) toast.success(imported === 1 ? 'Imagen guardada en el Inbox' : `${imported} imágenes guardadas`);
+        else if (missing > 0) toast.error('Los archivos no estaban en la caché (SW no interceptó el POST). Reinstala la app.');
         else toast.error('No se pudo guardar la imagen');
       })();
       return;
@@ -177,10 +190,16 @@ const Index = () => {
       store.addInboxItem({ content, type }).then(() => {
         toast.success(finalUrl ? 'Enlace guardado en el Inbox' : 'Guardado en el Inbox');
       }).catch(err => {
-        console.error('Share import failed', err);
+        console.error('[share] plain import failed', err);
         toast.error('No se pudo guardar');
       });
+      return;
     }
+
+    // Reached /share with nothing to import — most likely the service worker
+    // did not intercept the POST (old SW still active, or share came without
+    // a payload). Tell the user rather than staying silent.
+    toast.error('No llegó nada al inbox. Prueba a reinstalar la app.');
   }, [user]);
 
   // Quick inline edit handler (for status, importance, date, effort - Phase 2)

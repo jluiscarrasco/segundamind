@@ -59,6 +59,11 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/, /^\/share$/],
         importScripts: ['/sw-push.js', '/sw-share.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // Take over from any previously installed SW immediately so fixes to
+        // sw-share.js (and other imported scripts) reach users on the next
+        // page load instead of waiting for every tab to close.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ].filter(Boolean),
