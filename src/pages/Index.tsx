@@ -137,6 +137,7 @@ const Index = () => {
     const swCt = params.get('ct') || '';
     const swBytes = params.get('bytes') || '';
     const swCl = params.get('cl') || '';
+    const swBody = params.get('body') || '';
     const swError = params.get('error');
     console.log('[share] parsed', { url, title, text, fileKeys, swRan, swSaw, swStored, swFields, swCt, swBytes, swCl, swError });
 
@@ -179,7 +180,16 @@ const Index = () => {
     }
 
     if (swRan && fileKeys.length === 0) {
-      const detail = `sw-empty n=${swSaw ?? '?'} stored=${swStored ?? '?'} bytes=${swBytes || '?'} cl=${swCl || '?'} fields=[${swFields || 'none'}] ct=${swCt || '?'}`;
+      // Decode the base64 body dump into a readable string when small enough,
+      // so we can literally see what Chrome put into the multipart.
+      let bodyDump = '';
+      if (swBody) {
+        try {
+          const bin = atob(swBody);
+          bodyDump = ' body=`' + bin.replace(/\r/g, '\\r').replace(/\n/g, '\\n') + '`';
+        } catch {}
+      }
+      const detail = `sw-empty n=${swSaw ?? '?'} stored=${swStored ?? '?'} bytes=${swBytes || '?'} cl=${swCl || '?'} fields=[${swFields || 'none'}] ct=${swCt || '?'}${bodyDump}`;
       errorToast('SW recibió el POST pero sin archivos', detail);
       return;
     }

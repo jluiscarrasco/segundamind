@@ -88,6 +88,15 @@ async function handleShare(request) {
     const buf = new Uint8Array(await request.clone().arrayBuffer());
     params.set('bytes', String(buf.length));
 
+    // Body is tiny → include it verbatim so we can see whether Chrome sent
+    // a real multipart with files or just the boundary delimiters. Base64
+    // keeps CRLFs and non-ASCII safe inside the query string.
+    if (buf.length > 0 && buf.length < 600) {
+      let bin = '';
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      params.set('body', btoa(bin));
+    }
+
     const parts = await parseMultipart(request);
     params.set('n', String(parts.length));
 

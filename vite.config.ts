@@ -48,8 +48,26 @@ export default defineConfig(({ mode }) => ({
             url: "url",
             files: [
               {
+                // Some Chrome on Android versions silently drop the file when
+                // accept is only the "image/*" wildcard. Enumerate real MIME
+                // types and extensions so it always matches.
                 name: "media",
-                accept: ["image/*"],
+                accept: [
+                  "image/jpeg",
+                  "image/jpg",
+                  "image/png",
+                  "image/webp",
+                  "image/heic",
+                  "image/heif",
+                  "image/gif",
+                  ".jpg",
+                  ".jpeg",
+                  ".png",
+                  ".webp",
+                  ".heic",
+                  ".heif",
+                  ".gif",
+                ],
               },
             ],
           },
