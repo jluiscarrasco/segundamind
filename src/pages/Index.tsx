@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Navbar } from '@/components/Navbar';
@@ -329,6 +329,21 @@ const Index = () => {
     );
   }
 
+  // Auto-open the file picker as soon as the fallback dialog mounts, so
+  // the user doesn't have to tap the input first — one less tap between
+  // "share failed" and "pick your image".
+  const shareFallbackInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!shareFallback) return;
+    // requestAnimationFrame + timeout give the browser a beat to render the
+    // dialog before we synthesise the click; without that, some Chromes
+    // ignore the click as it fires before the input is in the layout tree.
+    const id = requestAnimationFrame(() => {
+      setTimeout(() => shareFallbackInputRef.current?.click(), 50);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [shareFallback]);
+
   // Shared with the mobile branch so the file-picker fallback ALSO shows
   // when Chrome's share_target on Android delivers an empty multipart body.
   const shareFallbackDialog = shareFallback && user ? (
@@ -345,6 +360,7 @@ const Index = () => {
           Android compartió la app pero no incluyó la imagen. Selecciónala aquí y la guardamos en el Inbox.
         </p>
         <input
+          ref={shareFallbackInputRef}
           type="file"
           accept="image/*"
           disabled={shareUploading}
