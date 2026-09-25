@@ -101,6 +101,30 @@ const Index = () => {
     setModal({ mode: 'edit', type, id });
   }, []);
 
+  // One-shot backfill trigger via ?backfill-notify=1 — the safest way for
+  // the user to run the migration without pasting code into DevTools, which
+  // Chrome now blocks by default with a self-XSS warning.
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('backfill-notify') !== '1') return;
+    window.history.replaceState({}, '', window.location.pathname);
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const r = await fetch('/api/backfill-notify', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await r.json();
+        if (r.ok) toast.success(`Backfill: ${data.updated} actualizadas, ${data.skipped} sin cambios`);
+        else toast.error(`Backfill error: ${data.error || r.status}`);
+      } catch (err: any) {
+        toast.error(`Backfill error: ${err.message || err}`);
+      }
+    })();
+  }, [user]);
+
   // Open task from URL parameter (e.g., ?task=<id> from calendar deep link
   // or a notification tap). Also handles ?snoozeTask=<id>&minutes=<n> from
   // the "Retrasar" action in a task notification.
