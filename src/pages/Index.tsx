@@ -109,6 +109,7 @@ const Index = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('backfill-notify') !== '1') return;
     window.history.replaceState({}, '', window.location.pathname);
+    const toastId = toast.loading('Backfill de notificaciones en curso…');
     (async () => {
       try {
         const token = await user.getIdToken();
@@ -117,10 +118,16 @@ const Index = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await r.json();
-        if (r.ok) toast.success(`Backfill: ${data.updated} actualizadas, ${data.skipped} sin cambios`);
-        else toast.error(`Backfill error: ${data.error || r.status}`);
+        if (r.ok) {
+          toast.success(`Backfill listo: ${data.updated} actualizadas, ${data.skipped} sin cambios (de ${data.total} totales)`, {
+            id: toastId,
+            duration: 10000,
+          });
+        } else {
+          toast.error(`Backfill error: ${data.error || r.status}`, { id: toastId, duration: 10000 });
+        }
       } catch (err: any) {
-        toast.error(`Backfill error: ${err.message || err}`);
+        toast.error(`Backfill error: ${err.message || err}`, { id: toastId, duration: 10000 });
       }
     })();
   }, [user]);
