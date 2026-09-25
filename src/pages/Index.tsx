@@ -101,11 +101,34 @@ const Index = () => {
     setModal({ mode: 'edit', type, id });
   }, []);
 
-  // Open task from URL parameter (e.g., ?task=<id> from calendar deep link)
+  // Open task from URL parameter (e.g., ?task=<id> from calendar deep link
+  // or a notification tap). Also handles ?snoozeTask=<id>&minutes=<n> from
+  // the "Retrasar" action in a task notification.
   useEffect(() => {
     if (store.tasks.length === 0) return; // Wait until tasks are loaded
     const params = new URLSearchParams(window.location.search);
     const taskId = params.get('task');
+    const snoozeTaskId = params.get('snoozeTask');
+    const snoozeMinutes = Number(params.get('minutes') || '60');
+
+    if (snoozeTaskId && store.tasks.some(t => t.id === snoozeTaskId)) {
+      // Push the task's reviewDate/startTime forward and let updateTask
+      // recompute notifyAt+notified from the new values. Keeps the timing
+      // logic in one place instead of touching notifyAt directly here.
+      const task = store.tasks.find(t => t.id === snoozeTaskId)!;
+      const base = task.reviewDate
+        ? new Date(`${task.reviewDate}T${task.startTime || '09:30'}:00`)
+        : new Date();
+      const next = new Date(base.getTime() + snoozeMinutes * 60 * 1000);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const newDate = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+      const newTime = `${pad(next.getHours())}:${pad(next.getMinutes())}`;
+      store.updateTask(snoozeTaskId, { reviewDate: newDate, startTime: newTime });
+      toast.success(`Recordatorio retrasado ${snoozeMinutes} min`);
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+
     if (taskId && store.tasks.some(t => t.id === taskId)) {
       setModal({ mode: 'edit', type: 'task', id: taskId });
       // Clean URL to avoid re-opening on refresh

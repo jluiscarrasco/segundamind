@@ -7,8 +7,23 @@ import type { Area, Project, Task, InboxItem, Resource, WikiPage, EntityType } f
 import { generateProjectKey } from '@/types';
 import {
   collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
-  onSnapshot, orderBy, writeBatch, increment, Unsubscribe,
+  onSnapshot, orderBy, writeBatch, increment, Timestamp, Unsubscribe,
 } from 'firebase/firestore';
+import { taskNotifyDate } from '@/lib/dateUtils';
+
+/**
+ * Build the fields that drive scheduled push notifications:
+ *   - notifyAt: UTC timestamp when the notification should fire (reviewDate +
+ *     startTime, or 09:30). Missing reviewDate → notifyAt = null.
+ *   - notified: false when the notifyAt is in the future so the scheduler
+ *     will send. true when it's already in the past (skip stale reminders,
+ *     e.g. a task backlogged into today at 10:00 for a 09:30 slot).
+ */
+function computeNotifyFields(reviewDate: string | null | undefined, startTime: string | null | undefined) {
+  if (!reviewDate) return { notifyAt: null, notified: false };
+  const at = taskNotifyDate(reviewDate, startTime);
+  return { notifyAt: Timestamp.fromDate(at), notified: at.getTime() <= Date.now() };
+}
 
 interface StoreData {
   areas: Area[];
@@ -220,6 +235,7 @@ export function useStore() {
 
     const docRef = await addDoc(collection(db, 'tasks'), {
       ...task,
+      ...computeNotifyFields(task.reviewDate, task.startTime),
       taskNumber: nextNumber,
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -241,9 +257,25 @@ export function useStore() {
     delete dbPatch.projectId;
     // Firestore rejects undefined values in updateDoc
     Object.keys(dbPatch).forEach(k => dbPatch[k] === undefined && delete dbPatch[k]);
+
+    // Recompute notifyAt / notified whenever any input to them changes.
+    // Also unset the notification when the task closes so it stops firing.
+    const touchesNotifyInputs = 'reviewDate' in patch || 'startTime' in patch || patch.status === 'finished';
+    if (touchesNotifyInputs) {
+      const current = data.tasks.find(t => t.id === id);
+      const nextReviewDate = 'reviewDate' in patch ? patch.reviewDate : current?.reviewDate;
+      const nextStartTime = 'startTime' in patch ? patch.startTime : current?.startTime;
+      const nextStatus = patch.status ?? current?.status;
+      if (nextStatus === 'finished') {
+        dbPatch.notified = true;
+      } else {
+        Object.assign(dbPatch, computeNotifyFields(nextReviewDate, nextStartTime));
+      }
+    }
+
     setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === id ? { ...t, ...patch } : t) }));
     await updateDoc(doc(db, 'tasks', id), dbPatch);
-  }, []);
+  }, [data.tasks]);
 
   const deleteTask = useCallback(async (id: string) => {
     setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) }));

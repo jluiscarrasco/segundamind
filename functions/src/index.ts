@@ -1864,4 +1864,142 @@ app.use('/', router);
 
 // Single HTTPS function serving every route above.
 exports.api = functions.https.onRequest(app);
-// Force redeploy
+
+// ============================================================================
+// TASK NOTIFICATIONS — scheduled web-push at each task's reviewDate + startTime
+// ============================================================================
+
+// Task documents that qualify to fire a notification. Anything that has been
+// closed (finished) is out.
+const NOTIFY_STATUSES = ['funnel', 'ready', 'scheduled', 'blocked', 'waiting', 'active'];
+
+const webpush = require('web-push');
+
+function ensureVapidConfigured(): boolean {
+  const pub = process.env.VAPID_PUBLIC_KEY || '';
+  const priv = process.env.VAPID_PRIVATE_KEY || '';
+  const contact = process.env.VAPID_CONTACT_EMAIL || 'jluis.carrasco@gmail.com';
+  if (!pub || !priv) {
+    console.warn('[notify] VAPID keys not configured — skipping notifications run');
+    return false;
+  }
+  webpush.setVapidDetails(`mailto:${contact}`, pub, priv);
+  return true;
+}
+
+async function sendPushToUserSubscriptions(userId: string, payload: object): Promise<{ sent: number; expired: number }> {
+  const snap = await db.collection('push_subscriptions').where('userId', '==', userId).get();
+  let sent = 0;
+  let expired = 0;
+  const body = JSON.stringify(payload);
+
+  for (const doc of snap.docs) {
+    const sub = doc.data();
+    const pushSubscription = {
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dhKey, auth: sub.authKey },
+    };
+    try {
+      await webpush.sendNotification(pushSubscription, body, { TTL: 3600 });
+      sent++;
+    } catch (err: any) {
+      const status = err && err.statusCode;
+      if (status === 404 || status === 410) {
+        // Endpoint retired by the push service — delete so we don't waste
+        // attempts on it forever.
+        await doc.ref.delete().catch(() => {});
+        expired++;
+      } else {
+        console.error(`[notify] push send failed (status ${status})`, err?.body || err?.message);
+      }
+    }
+  }
+  return { sent, expired };
+}
+
+// Every-minute cron. Cost is negligible: the query returns only tasks whose
+// notifyAt has just been reached, so most invocations find nothing to do.
+exports.sendTaskNotifications = functions.pubsub
+  .schedule('every 1 minutes')
+  .timeZone('Europe/Madrid')
+  .onRun(async () => {
+    if (!ensureVapidConfigured()) return null;
+
+    const now = admin.firestore.Timestamp.now();
+    const snap = await db.collection('tasks')
+      .where('notifyAt', '<=', now)
+      .where('notified', '==', false)
+      .where('status', 'in', NOTIFY_STATUSES)
+      .limit(200)
+      .get();
+
+    if (snap.empty) return null;
+    console.log(`[notify] ${snap.size} tasks due`);
+
+    // Group by user so we can send one bundled notification per person when
+    // multiple tasks fire at the same minute (typical for the 09:30 default).
+    const byUser = new Map<string, admin.firestore.QueryDocumentSnapshot[]>();
+    for (const d of snap.docs) {
+      const uid = d.data().userId as string;
+      const arr = byUser.get(uid) || [];
+      arr.push(d);
+      byUser.set(uid, arr);
+    }
+
+    for (const [userId, docs] of byUser) {
+      const names = docs.map(d => d.data().name || '(sin nombre)');
+      const payload = docs.length === 1
+        ? { title: '📋 Tarea programada', body: names[0], type: 'task_review', taskId: docs[0].id, url: `/?task=${docs[0].id}` }
+        : { title: `📋 ${docs.length} tareas programadas`, body: names.slice(0, 3).join(' · ') + (names.length > 3 ? ' …' : ''), type: 'task_review', url: '/' };
+
+      const { sent, expired } = await sendPushToUserSubscriptions(userId, payload);
+      console.log(`[notify] user=${userId} sent=${sent} expired=${expired} tasks=${docs.length}`);
+
+      // Mark tasks notified regardless of push outcome — a user without a
+      // valid subscription would otherwise refire every minute forever.
+      const batch = db.batch();
+      docs.forEach(d => batch.update(d.ref, { notified: true }));
+      await batch.commit();
+    }
+
+    return null;
+  });
+
+// One-shot endpoint the user can hit to backfill notifyAt/notified on tasks
+// that predate the notification feature. Requires auth; only touches tasks
+// belonging to the caller.
+router.post('/backfill-notify', async (req, res) => {
+  try {
+    const userId = await verifyToken(req.headers.authorization || '');
+    const snap = await db.collection('tasks').where('userId', '==', userId).get();
+    let updated = 0;
+    let skipped = 0;
+    for (const doc of snap.docs) {
+      const t = doc.data();
+      if (t.notifyAt !== undefined) { skipped++; continue; } // already backfilled
+      if (!t.reviewDate) { skipped++; continue; }
+      const time = /^\d{2}:\d{2}$/.test(t.startTime || '') ? t.startTime : '09:30';
+      // Same Madrid offset rule as the client's dateUtils.taskNotifyDate.
+      const [y, m, d] = String(t.reviewDate).split('-').map(Number);
+      const madridOffset = (() => {
+        const lastSunday = (m0: number) => {
+          const last = new Date(Date.UTC(y, m0 + 1, 0));
+          return last.getUTCDate() - last.getUTCDay();
+        };
+        if (m < 3 || m > 10) return '+01:00';
+        if (m > 3 && m < 10) return '+02:00';
+        if (m === 3) return d >= lastSunday(2) ? '+02:00' : '+01:00';
+        return d < lastSunday(9) ? '+02:00' : '+01:00';
+      })();
+      const at = new Date(`${t.reviewDate}T${time}:00${madridOffset}`);
+      await doc.ref.update({
+        notifyAt: admin.firestore.Timestamp.fromDate(at),
+        notified: at.getTime() <= Date.now(),
+      });
+      updated++;
+    }
+    res.json({ updated, skipped, total: snap.size });
+  } catch (error: any) {
+    sendError(res, error);
+  }
+});

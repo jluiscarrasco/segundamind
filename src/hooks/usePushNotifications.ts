@@ -4,8 +4,11 @@ import { API_BASE } from "@/lib/cloud-functions";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// VAPID Public Key - safe to expose in frontend
-const VAPID_PUBLIC_KEY = "BN6FuoIxeoTQuKkBohhBzymnZ-GNyrKS0_zvlMZZcoEoytMVBmr0uNplTQl5yA-KfYLYuKErlnuKLElN81Yyz04";
+// VAPID Public Key - safe to expose in frontend. Paired with VAPID_PRIVATE_KEY
+// in functions/.env; regenerated 2026-09-25 when we ported task notifications
+// to Firebase Cloud Functions, so any subscription minted before that date is
+// invalid and needs the user to disable + re-enable notifications.
+const VAPID_PUBLIC_KEY = "BAr4s6-q-aTJ-sHzwIjfokZTWad16_vvpvYu6dNstwFbmkS81ec0gTMkk1_yFcXrDavLY8trfPg40tlV3g6TopI";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);

@@ -45,3 +45,30 @@ export function parseDateString(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day);
 }
+
+/**
+ * Returns Madrid's UTC offset (+01:00 or +02:00) for a given date. Handles
+ * the EU DST rule: forward on the last Sunday of March, back on the last
+ * Sunday of October, both at 01:00 UTC.
+ */
+function madridOffsetOn(year: number, month1to12: number, day: number): '+01:00' | '+02:00' {
+  const lastSundayOfMonth = (m0: number) => {
+    const last = new Date(Date.UTC(year, m0 + 1, 0));
+    return last.getUTCDate() - last.getUTCDay();
+  };
+  if (month1to12 < 3 || month1to12 > 10) return '+01:00';
+  if (month1to12 > 3 && month1to12 < 10) return '+02:00';
+  if (month1to12 === 3) return day >= lastSundayOfMonth(2) ? '+02:00' : '+01:00';
+  return day < lastSundayOfMonth(9) ? '+02:00' : '+01:00';
+}
+
+/**
+ * Compute the UTC Date at which a task's notification should fire, given its
+ * reviewDate (YYYY-MM-DD in Madrid) and optional startTime (HH:mm in Madrid).
+ * Missing startTime defaults to 09:30, matching the iCal fallback.
+ */
+export function taskNotifyDate(reviewDate: string, startTime: string | null | undefined): Date {
+  const time = (startTime && /^\d{2}:\d{2}$/.test(startTime)) ? startTime : '09:30';
+  const [y, m, d] = reviewDate.split('-').map(Number);
+  return new Date(`${reviewDate}T${time}:00${madridOffsetOn(y, m, d)}`);
+}
