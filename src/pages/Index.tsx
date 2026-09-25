@@ -329,19 +329,82 @@ const Index = () => {
     );
   }
 
+  // Shared with the mobile branch so the file-picker fallback ALSO shows
+  // when Chrome's share_target on Android delivers an empty multipart body.
+  const shareFallbackDialog = shareFallback && user ? (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm p-4"
+      onClick={() => !shareUploading && setShareFallback(null)}
+    >
+      <div
+        className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        <h4 className="text-sm font-semibold text-foreground mb-1">Elige la imagen</h4>
+        <p className="text-[11px] text-muted-foreground mb-4">
+          Android compartió la app pero no incluyó la imagen. Selecciónala aquí y la guardamos en el Inbox.
+        </p>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={shareUploading}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setShareUploading(true);
+            try {
+              const ext = (file.name.split('.').pop()?.toLowerCase()) || (file.type.split('/')[1] || 'jpg');
+              const path = `${user.uid}/inbox/${crypto.randomUUID()}.${ext}`;
+              const fileRef = ref(storage, path);
+              await uploadBytes(fileRef, file);
+              const imageUrl = await getDownloadURL(fileRef);
+              const captionParts = [shareFallback.title, shareFallback.text].filter(Boolean);
+              const content = captionParts.length
+                ? `${captionParts.join('\n')}\n\n![image](${imageUrl})`
+                : imageUrl;
+              await store.addInboxItem({ content, type: 'image' });
+              toast.success('Imagen guardada en el Inbox');
+              setShareFallback(null);
+            } catch (err) {
+              console.error('[share] fallback upload failed', err);
+              toast.error('No se pudo subir la imagen');
+            } finally {
+              setShareUploading(false);
+            }
+          }}
+          className="w-full text-xs bg-secondary rounded-lg p-2 mb-3"
+        />
+        {shareUploading && (
+          <p className="text-xs text-muted-foreground text-center">Subiendo...</p>
+        )}
+        <button
+          type="button"
+          onClick={() => setShareFallback(null)}
+          disabled={shareUploading}
+          className="w-full py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground hover:text-foreground transition-all disabled:opacity-40"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   if (isMobile) {
     return (
-      <MobileNoteCaptureView
-        inbox={store.inbox}
-        tasks={store.tasks}
-        projects={store.projects}
-        areas={store.areas}
-        onAdd={store.addInboxItem}
-        onRemove={store.removeInboxItem}
-        onEnrichUrl={store.enrichUrlInboxItem}
-        onUpdateTask={store.updateTask}
-        onOpenDetail={(taskId) => handleEditEntity('task', taskId)}
-      />
+      <>
+        <MobileNoteCaptureView
+          inbox={store.inbox}
+          tasks={store.tasks}
+          projects={store.projects}
+          areas={store.areas}
+          onAdd={store.addInboxItem}
+          onRemove={store.removeInboxItem}
+          onEnrichUrl={store.enrichUrlInboxItem}
+          onUpdateTask={store.updateTask}
+          onOpenDetail={(taskId) => handleEditEntity('task', taskId)}
+        />
+        {shareFallbackDialog}
+      </>
     );
   }
 
@@ -634,63 +697,7 @@ const Index = () => {
       <ShortcutsHelpDialog isOpen={showHelpDialog} onClose={() => setShowHelpDialog(false)} />
 
       {/* Share fallback: Chrome didn't include the file in the POST body. */}
-      {shareFallback && user && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm p-4"
-          onClick={() => !shareUploading && setShareFallback(null)}
-        >
-          <div
-            className="bg-card border border-border rounded-xl shadow-card p-5 w-full max-w-md"
-            onClick={e => e.stopPropagation()}
-          >
-            <h4 className="text-sm font-semibold text-foreground mb-1">Elige la imagen</h4>
-            <p className="text-[11px] text-muted-foreground mb-4">
-              Android compartió la app pero no incluyó la imagen. Selecciónala aquí y la guardamos en el Inbox.
-            </p>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={shareUploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setShareUploading(true);
-                try {
-                  const ext = (file.name.split('.').pop()?.toLowerCase()) || (file.type.split('/')[1] || 'jpg');
-                  const path = `${user.uid}/inbox/${crypto.randomUUID()}.${ext}`;
-                  const fileRef = ref(storage, path);
-                  await uploadBytes(fileRef, file);
-                  const imageUrl = await getDownloadURL(fileRef);
-                  const captionParts = [shareFallback.title, shareFallback.text].filter(Boolean);
-                  const content = captionParts.length
-                    ? `${captionParts.join('\n')}\n\n![image](${imageUrl})`
-                    : imageUrl;
-                  await store.addInboxItem({ content, type: 'image' });
-                  toast.success('Imagen guardada en el Inbox');
-                  setShareFallback(null);
-                } catch (err) {
-                  console.error('[share] fallback upload failed', err);
-                  toast.error('No se pudo subir la imagen');
-                } finally {
-                  setShareUploading(false);
-                }
-              }}
-              className="w-full text-xs bg-secondary rounded-lg p-2 mb-3"
-            />
-            {shareUploading && (
-              <p className="text-xs text-muted-foreground text-center">Subiendo...</p>
-            )}
-            <button
-              type="button"
-              onClick={() => setShareFallback(null)}
-              disabled={shareUploading}
-              className="w-full py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground hover:text-foreground transition-all disabled:opacity-40"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      {shareFallbackDialog}
 
       <AnimatePresence>
         {modal && (
