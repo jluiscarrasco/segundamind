@@ -238,7 +238,11 @@ const Index = () => {
       return;
     }
 
-    if (swRan && fileKeys.length === 0) {
+    // Only offer the file-picker fallback when the share truly carried
+    // NOTHING useful — no files, no url, no text, no title. A share that
+    // brings a URL or text is a normal link/note share; those flow into
+    // the "plain URL/text" branch below.
+    if (swRan && fileKeys.length === 0 && !url && !title && !text) {
       // Chrome opened the PWA via the share intent but the multipart body
       // arrived with no file parts — the WebAPK on this device is not
       // shipping files to us. Rather than fail silently, offer a file
