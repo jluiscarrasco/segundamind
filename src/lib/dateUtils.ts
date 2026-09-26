@@ -63,6 +63,22 @@ function madridOffsetOn(year: number, month1to12: number, day: number): '+01:00'
 }
 
 /**
+ * Snap an HH:mm string to the nearest 5-minute boundary. Empty / invalid
+ * input passes through unchanged. Chrome's native <input type="time"> picker
+ * ignores the `step` attribute in its dropdown UI, so we enforce the rule
+ * in the onChange handlers instead.
+ */
+export function snapTimeToFiveMinutes(hhmm: string): string {
+  if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return hhmm;
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = h * 60 + m;
+  const rounded = Math.round(total / 5) * 5;
+  const hh = Math.floor(rounded / 60) % 24;
+  const mm = rounded % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+/**
  * Compute the UTC Date at which a task's notification should fire, given its
  * reviewDate (YYYY-MM-DD in Madrid) and optional startTime (HH:mm in Madrid).
  * Missing startTime defaults to 09:30, matching the iCal fallback.

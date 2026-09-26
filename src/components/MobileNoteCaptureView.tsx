@@ -3,6 +3,7 @@ import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, Arro
 import { cloudFunctions } from '@/lib/cloud-functions';
 import type { Importance } from '@/types';
 import { IMPORTANCE_LABELS } from '@/types';
+import { snapTimeToFiveMinutes } from '@/lib/dateUtils';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
@@ -708,7 +709,7 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
                   type="time"
                   step={300}
                   value={procStartTime}
-                  onChange={e => setProcStartTime(e.target.value)}
+                  onChange={e => setProcStartTime(snapTimeToFiveMinutes(e.target.value))}
                   disabled={!procReviewDate}
                   className="w-28 shrink-0 bg-secondary text-xs text-foreground rounded-md px-2 py-2 outline-none disabled:opacity-40"
                 />

@@ -5,7 +5,7 @@ import type { Importance, Status, Resource, Effort, Subtask, Project, Area } fro
 import { IMPORTANCE_LABELS, STATUS_LABELS, STATUS_DESCRIPTIONS, EFFORT_OPTIONS } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { cloudFunctions } from '@/lib/cloud-functions';
-import { addDaysCETKey, addMonthsCETKey } from '@/lib/dateUtils';
+import { addDaysCETKey, addMonthsCETKey, snapTimeToFiveMinutes } from '@/lib/dateUtils';
 import { storage } from '@/integrations/firebase/config';
 import { uploadBytes, ref, getDownloadURL, deleteObject } from 'firebase/storage';
 import { toast } from 'sonner';
@@ -385,7 +385,7 @@ Responde SOLO con un JSON array, sin texto adicional:
                 type="time"
                 step={300}
                 value={startTime}
-                onChange={e => setStartTime(e.target.value)}
+                onChange={e => setStartTime(snapTimeToFiveMinutes(e.target.value))}
                 disabled={!reviewDate}
                 className="w-full bg-secondary text-xs text-foreground rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-primary transition-all disabled:opacity-50"
               />

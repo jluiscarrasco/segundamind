@@ -4,7 +4,7 @@ import { ChevronUp, ChevronDown, ListChecks, ArrowLeft } from 'lucide-react';
 import type { Task, Project, Area } from '@/types';
 import { STATUS_LABELS, EFFORT_OPTIONS, IMPORTANCE_LABELS } from '@/types';
 import { ImportanceBadge, StatusIcon } from './StatusBadges';
-import { getTodayKeyCET, addDaysCETKey, dateToCETKey } from '@/lib/dateUtils';
+import { getTodayKeyCET, addDaysCETKey, dateToCETKey, snapTimeToFiveMinutes } from '@/lib/dateUtils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -144,7 +144,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onOpen
                 type="time"
                 step={300}
                 value={selectedTask.startTime || ''}
-                onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value || null })}
+                onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value ? snapTimeToFiveMinutes(e.target.value) : null })}
                 disabled={!selectedTask.reviewDate}
                 className="mt-0.5 w-full px-2 py-0.5 rounded border border-border bg-background text-foreground text-xs h-6 disabled:opacity-50"
               />

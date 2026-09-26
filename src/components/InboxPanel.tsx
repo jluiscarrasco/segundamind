@@ -9,6 +9,7 @@ import { storage } from '@/integrations/firebase/config';
 import { toast } from 'sonner';
 import type { InboxItem, Project, Area, Task, Importance, EntityType } from '@/types';
 import { IMPORTANCE_LABELS } from '@/types';
+import { snapTimeToFiveMinutes } from '@/lib/dateUtils';
 
 type ConvertMode = 'task' | 'note';
 
@@ -600,7 +601,7 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                                   type="time"
                                   step={300}
                                   value={taskStartTime}
-                                  onChange={e => setTaskStartTime(e.target.value)}
+                                  onChange={e => setTaskStartTime(snapTimeToFiveMinutes(e.target.value))}
                                   disabled={!taskReviewDate}
                                   className="w-24 shrink-0 bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none disabled:opacity-40"
                                   title={taskReviewDate ? 'Hora de inicio (opcional)' : 'Elige primero una fecha'}

@@ -5,7 +5,7 @@ import type { Task, Project, Area, Importance, EntityType, Resource } from '@/ty
 import type { ScoreBreakdown } from '@/lib/scoring';
 import { getTaskDisplayId } from '@/types';
 import { ImportanceDot } from './StatusBadges';
-import { getTodayKeyCET, addDaysCETKey } from '@/lib/dateUtils';
+import { getTodayKeyCET, addDaysCETKey, snapTimeToFiveMinutes } from '@/lib/dateUtils';
 import { scoreTaskDetailed } from '@/lib/scoring';
 import { QuickTaskEdit } from './QuickTaskEdit';
 import { LinkedFilesList } from './LinkedFilesList';
@@ -339,7 +339,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                       type="time"
                       step={300}
                       value={selectedTask.startTime || ''}
-                      onChange={(e) => onQuickEdit?.(selectedTask.id, 'startTime', e.target.value || null)}
+                      onChange={(e) => onQuickEdit?.(selectedTask.id, 'startTime', e.target.value ? snapTimeToFiveMinutes(e.target.value) : null)}
                       className="w-full text-xs px-2 py-1 rounded bg-secondary text-foreground outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
