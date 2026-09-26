@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut, Mic, StopCircle, RotateCcw, Paperclip, Link2 } from 'lucide-react';
+import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut, Mic, StopCircle, RotateCcw, Paperclip, Link2, ArrowRightCircle, Sparkles } from 'lucide-react';
+import { cloudFunctions } from '@/lib/cloud-functions';
+import type { Importance } from '@/types';
+import { IMPORTANCE_LABELS } from '@/types';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
@@ -23,12 +26,33 @@ interface Props {
   onEnrichUrl?: (inboxId: string, url: string) => void;
   onUpdateTask: (id: string, data: Partial<Task>) => void;
   onOpenDetail?: (id: string) => void;
+  onConvertToTask?: (
+    inboxId: string,
+    projectId: string,
+    importance: Importance,
+    name?: string,
+    description?: string,
+    opts?: { discardImage?: boolean; reviewDate?: string | null; startTime?: string | null }
+  ) => void;
 }
 
-export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl, onUpdateTask, onOpenDetail }: Props) {
+export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, onRemove, onEnrichUrl, onUpdateTask, onOpenDetail, onConvertToTask }: Props) {
   const { user, signOut: authSignOut } = useAuth();
   const [text, setText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // AI-processing panel state (mobile-only version of InboxPanel's flow)
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [classifying, setClassifying] = useState(false);
+  const [aiReasoning, setAiReasoning] = useState('');
+  const [procName, setProcName] = useState('');
+  const [procDescription, setProcDescription] = useState('');
+  const [procArea, setProcArea] = useState('');
+  const [procProject, setProcProject] = useState('');
+  const [procImportance, setProcImportance] = useState<Importance>('normal');
+  const [procReviewDate, setProcReviewDate] = useState('');
+  const [procStartTime, setProcStartTime] = useState('');
+  const [procKeepImage, setProcKeepImage] = useState(true);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [enrichingIds, setEnrichingIds] = useState<Set<string>>(new Set());
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -91,6 +115,66 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
   const dismissBanner = () => {
     setShowInstallBanner(false);
     localStorage.setItem('install-banner-dismissed', String(Date.now()));
+  };
+
+  // Open the process panel for an inbox item and kick off the AI
+  // classifier. Behaves like InboxPanel.startProcess on desktop.
+  const startProcess = async (id: string) => {
+    const item = inbox.find(i => i.id === id);
+    if (!item || !user) return;
+    setProcessingId(id);
+    setProcName('');
+    setProcDescription('');
+    setProcArea('');
+    setProcProject('');
+    setProcImportance('normal');
+    setProcReviewDate('');
+    setProcStartTime('');
+    setProcKeepImage(true);
+    setAiReasoning('');
+    if (projects.length === 0) return;
+    setClassifying(true);
+    try {
+      const urlMatch = item.content.match(/https?:\/\/\S+/);
+      const data = urlMatch
+        ? await cloudFunctions.enrichUrl({ url: urlMatch[0] }, user)
+        : await cloudFunctions.classifyInbox({ content: item.content, projects, areas }, user);
+      if (data?.projectId && projects.some(p => p.id === data.projectId)) {
+        setProcProject(data.projectId);
+        const proj = projects.find(p => p.id === data.projectId);
+        if (proj?.areaId) setProcArea(proj.areaId);
+      }
+      if (data?.importance) setProcImportance(data.importance);
+      if (data?.suggestedName) setProcName(data.suggestedName);
+      if (data?.suggestedDescription) setProcDescription(data.suggestedDescription);
+      if (data?.reasoning) setAiReasoning(data.reasoning);
+    } catch (err) {
+      console.error('AI classification failed:', err);
+    } finally {
+      setClassifying(false);
+    }
+  };
+
+  const cancelProcess = () => {
+    setProcessingId(null);
+    setClassifying(false);
+    setAiReasoning('');
+  };
+
+  const confirmProcess = () => {
+    if (!processingId || !procProject || !onConvertToTask) return;
+    const item = inbox.find(i => i.id === processingId);
+    const opts: {
+      discardImage?: boolean;
+      reviewDate?: string | null;
+      startTime?: string | null;
+    } = {
+      reviewDate: procReviewDate || null,
+      startTime: procReviewDate && procStartTime ? procStartTime : null,
+    };
+    if (item?.type === 'image') opts.discardImage = !procKeepImage;
+    onConvertToTask(processingId, procProject, procImportance, procName || undefined, procDescription || undefined, opts);
+    cancelProcess();
   };
 
   const handleSend = async () => {
@@ -498,12 +582,23 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
                       </>
                     )}
                   </div>
-                  <button
-                    onClick={() => onRemove(item.id)}
-                    className="shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="shrink-0 flex flex-col gap-1">
+                    {onConvertToTask && (
+                      <button
+                        onClick={() => startProcess(item.id)}
+                        title="Procesar con IA"
+                        className="text-primary hover:text-primary/80 transition-colors p-1"
+                      >
+                        <ArrowRightCircle className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onRemove(item.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </motion.div>
               );
             })}
@@ -512,6 +607,134 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
       </div>
 
       <MobileTasksDrawer tasks={tasks} projects={projects} areas={areas} onUpdateTask={onUpdateTask} onOpenDetail={onOpenDetail} />
+
+      {/* AI processing panel — bottom sheet dialog for the mobile view */}
+      {processingId && (() => {
+        const item = inbox.find(i => i.id === processingId);
+        if (!item) return null;
+        return (
+          <div
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-background/60 backdrop-blur-sm"
+            onClick={cancelProcess}
+          >
+            <div
+              className="bg-card border-t border-border rounded-t-2xl shadow-card p-4 w-full max-h-[90vh] overflow-y-auto space-y-3"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-foreground">Procesar nota</h4>
+                <button onClick={cancelProcess} className="p-1 text-muted-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {classifying && (
+                <div className="flex items-center gap-2 text-xs text-primary">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>IA analizando…</span>
+                </div>
+              )}
+              {!classifying && aiReasoning && (
+                <div className="flex items-start gap-2 text-[11px] text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg p-2">
+                  <Sparkles className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                  <span>{aiReasoning}</span>
+                </div>
+              )}
+
+              {item.type === 'image' && (
+                <label className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg bg-secondary/60">
+                  <input
+                    type="checkbox"
+                    checked={procKeepImage}
+                    onChange={e => setProcKeepImage(e.target.checked)}
+                    className="w-3.5 h-3.5 accent-primary"
+                  />
+                  <span className="flex-1 text-foreground">Adjuntar imagen a la tarea</span>
+                </label>
+              )}
+
+              <input
+                type="text"
+                value={procName}
+                onChange={e => setProcName(e.target.value)}
+                placeholder="Título de la tarea"
+                className="w-full bg-secondary text-sm text-foreground rounded-md px-3 py-2 outline-none focus:ring-1 focus:ring-primary"
+              />
+              <textarea
+                value={procDescription}
+                onChange={e => setProcDescription(e.target.value)}
+                placeholder="Descripción (opcional)"
+                rows={3}
+                className="w-full bg-secondary text-xs text-foreground rounded-md px-3 py-2 outline-none focus:ring-1 focus:ring-primary resize-none"
+              />
+
+              <select
+                value={procArea}
+                onChange={e => { setProcArea(e.target.value); setProcProject(''); }}
+                className="w-full bg-secondary text-xs text-foreground rounded-md px-3 py-2 outline-none"
+              >
+                <option value="">Seleccionar área…</option>
+                {areas.map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}
+              </select>
+              <select
+                value={procProject}
+                onChange={e => setProcProject(e.target.value)}
+                disabled={!procArea}
+                className="w-full bg-secondary text-xs text-foreground rounded-md px-3 py-2 outline-none disabled:opacity-40"
+              >
+                <option value="">Seleccionar proyecto…</option>
+                {projects.filter(p => p.areaId === procArea).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <select
+                value={procImportance}
+                onChange={e => setProcImportance(e.target.value as Importance)}
+                className="w-full bg-secondary text-xs text-foreground rounded-md px-3 py-2 outline-none"
+              >
+                {(Object.entries(IMPORTANCE_LABELS) as [Importance, string][]).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-1.5">
+                <input
+                  type="date"
+                  value={procReviewDate}
+                  onChange={e => setProcReviewDate(e.target.value)}
+                  className="flex-1 min-w-0 bg-secondary text-xs text-foreground rounded-md px-2 py-2 outline-none"
+                />
+                <input
+                  type="time"
+                  step={300}
+                  value={procStartTime}
+                  onChange={e => setProcStartTime(e.target.value)}
+                  disabled={!procReviewDate}
+                  className="w-28 shrink-0 bg-secondary text-xs text-foreground rounded-md px-2 py-2 outline-none disabled:opacity-40"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={cancelProcess}
+                  className="flex-1 py-2 rounded-lg bg-secondary text-xs font-medium text-muted-foreground"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmProcess}
+                  disabled={!procProject || classifying}
+                  className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+                >
+                  Crear tarea
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -350,7 +350,14 @@ export function useStore() {
     }
   };
 
-  const convertInboxToTask = useCallback(async (inboxId: string, projectId: string, importance: Task['importance'], taskName?: string, taskDescription?: string, opts?: { discardImage?: boolean }) => {
+  const convertInboxToTask = useCallback(async (
+    inboxId: string,
+    projectId: string,
+    importance: Task['importance'],
+    taskName?: string,
+    taskDescription?: string,
+    opts?: { discardImage?: boolean; reviewDate?: string | null; startTime?: string | null }
+  ) => {
     if (!user) return;
     const item = data.inbox.find(i => i.id === inboxId);
     if (!item) return;
@@ -361,7 +368,10 @@ export function useStore() {
     // Update project counter
     await updateDoc(doc(db, 'projects', projectId), { taskCounter: nextNumber });
 
-    // Create task
+    // Create task — reviewDate/startTime optional. A time without a date is
+    // ignored; computeNotifyFields then produces a null notifyAt.
+    const reviewDate = opts?.reviewDate || null;
+    const startTime = reviewDate ? (opts?.startTime || null) : null;
     const taskDocRef = await addDoc(collection(db, 'tasks'), {
       projectId,
       taskNumber: nextNumber,
@@ -370,7 +380,9 @@ export function useStore() {
       status: 'funnel',
       importance,
       effort: null,
-      reviewDate: null,
+      reviewDate,
+      startTime,
+      ...computeNotifyFields(reviewDate, startTime),
       userId: user.uid,
       createdAt: serverTimestamp(),
     });

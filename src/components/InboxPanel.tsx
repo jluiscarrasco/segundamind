@@ -19,7 +19,7 @@ interface InboxPanelProps {
   tasks: Task[];
   onAdd: (item: Omit<InboxItem, 'id' | 'createdAt'>) => Promise<InboxItem | null> | void;
   onRemove: (id: string) => void;
-  onConvertToTask: (inboxId: string, projectId: string, importance: Importance, name?: string, description?: string, opts?: { discardImage?: boolean }) => void;
+  onConvertToTask: (inboxId: string, projectId: string, importance: Importance, name?: string, description?: string, opts?: { discardImage?: boolean; reviewDate?: string | null; startTime?: string | null }) => void;
   onAttachAsNote: (inboxId: string, entityType: EntityType, entityId: string, opts?: { discardImage?: boolean }) => void;
   onEnrichUrl?: (inboxId: string, url: string) => void;
   isOpen: boolean;
@@ -41,6 +41,8 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const [aiReasoning, setAiReasoning] = useState('');
   const [taskName, setTaskName] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
+  const [taskReviewDate, setTaskReviewDate] = useState('');
+  const [taskStartTime, setTaskStartTime] = useState('');
   const [noteEntityType, setNoteEntityType] = useState<EntityType>('project');
   const [noteEntityId, setNoteEntityId] = useState('');
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -188,6 +190,8 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
     setAiReasoning('');
     setTaskName('');
     setTaskDescription('');
+    setTaskReviewDate('');
+    setTaskStartTime('');
     setConvertMode('task');
     setNoteEntityType('project');
     setNoteEntityId('');
@@ -201,7 +205,15 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
   const handleConvertToTask = (id: string) => {
     if (!selectedProject) return;
     const item = items.find(i => i.id === id);
-    const opts = item?.type === 'image' ? { discardImage: !keepImage } : undefined;
+    const opts: {
+      discardImage?: boolean;
+      reviewDate?: string | null;
+      startTime?: string | null;
+    } = {
+      reviewDate: taskReviewDate || null,
+      startTime: taskReviewDate && taskStartTime ? taskStartTime : null,
+    };
+    if (item?.type === 'image') opts.discardImage = !keepImage;
     onConvertToTask(id, selectedProject, selectedImportance, taskName || undefined, taskDescription || undefined, opts);
     resetProcessing();
   };
@@ -221,6 +233,8 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
     setAiReasoning('');
     setTaskName('');
     setTaskDescription('');
+    setTaskReviewDate('');
+    setTaskStartTime('');
     setConvertMode('task');
     setNoteEntityType('project');
     setNoteEntityId('');
@@ -572,6 +586,26 @@ export function InboxPanel({ items, projects, areas, tasks, onAdd, onRemove, onC
                                   <option key={key} value={key}>{label}</option>
                                 ))}
                               </select>
+                              {/* Optional date + time. Time only enabled when a date is set,
+                                  same rule the entity sidebar uses. Snap to 5-min increments. */}
+                              <div className="flex gap-1">
+                                <input
+                                  type="date"
+                                  value={taskReviewDate}
+                                  onChange={e => setTaskReviewDate(e.target.value)}
+                                  className="flex-1 min-w-0 bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none"
+                                  title="Fecha de revisión (opcional)"
+                                />
+                                <input
+                                  type="time"
+                                  step={300}
+                                  value={taskStartTime}
+                                  onChange={e => setTaskStartTime(e.target.value)}
+                                  disabled={!taskReviewDate}
+                                  className="w-24 shrink-0 bg-secondary text-xs text-foreground rounded-md px-2 py-1.5 outline-none disabled:opacity-40"
+                                  title={taskReviewDate ? 'Hora de inicio (opcional)' : 'Elige primero una fecha'}
+                                />
+                              </div>
                               <button
                                 onClick={() => handleConvertToTask(item.id)}
                                 disabled={!selectedProject || classifying}

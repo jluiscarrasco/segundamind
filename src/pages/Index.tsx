@@ -476,6 +476,7 @@ const Index = () => {
           onEnrichUrl={store.enrichUrlInboxItem}
           onUpdateTask={store.updateTask}
           onOpenDetail={(taskId) => handleEditEntity('task', taskId)}
+          onConvertToTask={store.convertInboxToTask}
         />
         {shareFallbackDialog}
       </>
