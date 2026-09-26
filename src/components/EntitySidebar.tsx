@@ -383,6 +383,7 @@ Responde SOLO con un JSON array, sin texto adicional:
               <label className="text-xs font-medium text-muted-foreground block mb-1.5">Hora de Inicio (opcional)</label>
               <input
                 type="time"
+                step={300}
                 value={startTime}
                 onChange={e => setStartTime(e.target.value)}
                 disabled={!reviewDate}

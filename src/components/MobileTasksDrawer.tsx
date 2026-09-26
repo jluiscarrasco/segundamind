@@ -142,6 +142,7 @@ export function MobileTasksDrawer({ tasks, projects, areas, onUpdateTask, onOpen
               <label className="text-[10px] font-semibold text-muted-foreground uppercase">Hora Inicio</label>
               <input
                 type="time"
+                step={300}
                 value={selectedTask.startTime || ''}
                 onChange={(e) => onUpdateTask(selectedTask.id, { startTime: e.target.value || null })}
                 disabled={!selectedTask.reviewDate}

@@ -337,6 +337,7 @@ export function TuAgenda({ tasks, projects, areas, resources, onEditEntity, onPo
                     <p className="text-xs font-semibold text-muted-foreground mb-1">HORA INICIO</p>
                     <input
                       type="time"
+                      step={300}
                       value={selectedTask.startTime || ''}
                       onChange={(e) => onQuickEdit?.(selectedTask.id, 'startTime', e.target.value || null)}
                       className="w-full text-xs px-2 py-1 rounded bg-secondary text-foreground outline-none focus:ring-1 focus:ring-primary"

@@ -3,6 +3,7 @@
     {
       "collectionGroup": "tasks",
       "queryScope": "COLLECTION",
+      "density": "SPARSE_ALL",
       "fields": [
         { "fieldPath": "notified", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },

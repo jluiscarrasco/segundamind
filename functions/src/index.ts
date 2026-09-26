@@ -1917,10 +1917,11 @@ async function sendPushToUserSubscriptions(userId: string, payload: object): Pro
   return { sent, expired };
 }
 
-// Every-minute cron. Cost is negligible: the query returns only tasks whose
-// notifyAt has just been reached, so most invocations find nothing to do.
+// Every-5-minutes cron. Users only ever schedule tasks on 5-minute
+// increments (the time input's `step` is 300 seconds), so a finer grain
+// gains nothing and just burns invocations.
 exports.sendTaskNotifications = functions.pubsub
-  .schedule('every 1 minutes')
+  .schedule('every 5 minutes')
   .timeZone('Europe/Madrid')
   .onRun(async () => {
     if (!ensureVapidConfigured()) return null;
