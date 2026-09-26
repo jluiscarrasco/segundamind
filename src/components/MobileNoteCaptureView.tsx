@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut, Mic, StopCircle, RotateCcw, Paperclip } from 'lucide-react';
+import { Send, Trash2, Brain, Plus, Image as ImageIcon, X, Download, Share, ArrowUpFromLine, Bell, BellOff, Loader2, LogOut, Mic, StopCircle, RotateCcw, Paperclip, Link2 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { Button } from '@/components/ui/button';
@@ -426,6 +426,23 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
               const imgUrl = isImageUrl(item.content) ? extractImageUrl(item.content) : null;
               const textContent = imgUrl ? extractText(item.content) : item.content;
 
+              // Match the desktop InboxPanel link card: favicon + domain + path,
+              // whole row clickable to open the URL in a new tab.
+              const isLink = item.type === 'link';
+              let linkUrl = '';
+              let linkHostname = '';
+              let linkPath = '';
+              if (isLink) {
+                linkUrl = item.content.trim();
+                try {
+                  const u = new URL(linkUrl);
+                  linkHostname = u.hostname.replace(/^www\./, '');
+                  linkPath = (u.pathname + u.search + u.hash).replace(/\/$/, '');
+                } catch {
+                  linkHostname = linkUrl;
+                }
+              }
+
               return (
                 <motion.div
                   key={item.id}
@@ -435,17 +452,50 @@ export function MobileNoteCaptureView({ inbox, tasks, projects, areas, onAdd, on
                   className="flex items-start gap-3 bg-card border border-border rounded-xl p-3.5 shadow-sm"
                 >
                   <div className="flex-1 min-w-0">
-                    {imgUrl && (
-                      <img
-                        src={imgUrl}
-                        alt="Nota con imagen"
-                        className="w-full max-h-48 object-cover rounded-lg mb-2"
-                      />
-                    )}
-                    {textContent && (
-                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
-                        {textContent}
-                      </p>
+                    {isLink ? (
+                      <a
+                        href={linkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={linkUrl}
+                        className="flex items-start gap-2 group"
+                      >
+                        <img
+                          src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(linkHostname)}&sz=32`}
+                          alt=""
+                          width={16}
+                          height={16}
+                          className="mt-0.5 rounded-sm shrink-0"
+                          loading="lazy"
+                          onError={e => (e.currentTarget.style.display = 'none')}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                            {linkHostname}
+                          </div>
+                          {linkPath && (
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              {linkPath}
+                            </div>
+                          )}
+                        </div>
+                        <Link2 className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
+                      </a>
+                    ) : (
+                      <>
+                        {imgUrl && (
+                          <img
+                            src={imgUrl}
+                            alt="Nota con imagen"
+                            className="w-full max-h-48 object-cover rounded-lg mb-2"
+                          />
+                        )}
+                        {textContent && (
+                          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
+                            {textContent}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   <button
